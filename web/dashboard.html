@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI简历助手 - 控制台</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dashboard-page">
+    <canvas id="particleCanvas"></canvas>
+    
+    <!-- 加载动画 -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <div class="dashboard-container">
+        <header class="cyber-header">
+            <h1 class="cyber-title">AI简历助手</h1>
+            <div class="user-info">
+                <span id="userEmail"></span>
+                <button class="cyber-button small" onclick="logout()">
+                    <span class="glow-text">退出</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="dashboard-content">
+            <div class="control-panel">
+                <div class="panel-section">
+                    <h2 class="cyber-subtitle">简历管理</h2>
+                    <button class="cyber-button" onclick="createMeeting()">
+                        <span class="glow-text">创建面试</span>
+                        <span class="particle-layer"></span>
+                    </button>
+                    <button class="cyber-button" onclick="uploadResume()">
+                        <span class="glow-text">上传简历</span>
+                        <span class="particle-layer"></span>
+                    </button>
+                </div>
+
+                <div class="panel-section">
+                    <h2 class="cyber-subtitle">AI面试</h2>
+                    <div class="interview-container">
+                        <div id="interviewChat" class="chat-window">
+                            <!-- 面试对话将在这里动态显示 -->
+                        </div>
+                        <div class="input-area">
+                            <input type="text" id="answerInput" class="cyber-input" placeholder="输入你的回答...">
+                            <button class="cyber-button" onclick="sendAnswer()">
+                                <span class="glow-text">发送</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2 class="cyber-subtitle">面试记录</h2>
+                    <div id="meetingList" class="meeting-list">
+                        <!-- 面试记录将在这里动态显示 -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

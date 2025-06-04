@@ -1,4 +1,4 @@
-package component
+package rag
 
 const (
 	keyPrefix                    = "eino_doc_customized:"  // keyPrefix should be the prefix of keys you write to redis and want to retrieve.

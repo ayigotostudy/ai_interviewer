@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI简历助手 - 登录</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+    <canvas id="particleCanvas"></canvas>
+    
+    <!-- 加载动画 -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+    
+    <div class="login-container">
+        <div class="login-box">
+            <h1 class="cyber-title">AI简历助手</h1>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <input type="email" id="email" required class="cyber-input">
+                    <label for="email">邮箱</label>
+                    <div class="input-line"></div>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" required class="cyber-input">
+                    <label for="password">密码</label>
+                    <div class="input-line"></div>
+                </div>
+                <button type="submit" class="cyber-button">
+                    <span class="glow-text">登录</span>
+                    <span class="particle-layer"></span>
+                </button>
+                <div class="form-footer">
+                    <a href="javascript:void(0)" onclick="showRegister()" class="cyber-link">注册账号</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

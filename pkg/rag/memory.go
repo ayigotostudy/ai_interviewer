@@ -1,4 +1,4 @@
-package component
+package rag
 
 import (
 	"context"
@@ -125,7 +125,8 @@ type Conversation struct {
 	client        *redis.Client
 	maxWindowSize int
 
-	LastConversationsKnowledge string
+	LastConversationsKnowledge string `json:"last_conversations_knowledge"`
+	RoundCount                 int    `json:"round_count"` // 对话轮数
 }
 
 func (c *Conversation) Append(msg ...*schema.Message) {
@@ -133,6 +134,20 @@ func (c *Conversation) Append(msg ...*schema.Message) {
 	defer c.mu.Unlock()
 
 	c.Messages = append(c.Messages, msg...)
+	c.RoundCount++ // 增加轮数
+	c.save()
+}
+
+func (c *Conversation) GetRoundCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.RoundCount
+}
+
+func (c *Conversation) SetRoundCount(count int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.RoundCount = count
 	c.save()
 }
 

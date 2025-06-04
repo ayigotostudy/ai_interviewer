@@ -1,4 +1,4 @@
-package component
+package rag
 
 import "context"
 

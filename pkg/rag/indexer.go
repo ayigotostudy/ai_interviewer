@@ -1,11 +1,8 @@
-package component
+package rag
 
 import (
 	"context"
 	"fmt"
-
-	// "log"
-	// "os"
 
 	"github.com/cloudwego/eino-ext/components/embedding/openai"
 
@@ -25,7 +22,7 @@ func initIndexer(ctx context.Context, emb *openai.Embedder) (err error) {
 		},
 	)
 
-	createIndex(ctx, client)
+	//createIndex(ctx, client)
 
 	// create es indexer component
 	indexer, err = ri.NewIndexer(ctx, &ri.IndexerConfig{
@@ -97,20 +94,3 @@ func createIndex(ctx context.Context, client *redis.Client) {
 
 	fmt.Println(result) // OK
 }
-
-// // 添加帮助函数确保数值有效
-// func convertToNumber(val interface{}) interface{} {
-// 	switch v := val.(type) {
-// 	case int, int32, int64, float32, float64:
-// 		return v // 直接返回数值
-// 	case string:
-// 		if v == "" {
-// 			return 0 // 空字符串转为0
-// 		}
-// 		// 尝试解析为数值
-// 		if num, err := strconv.ParseFloat(v, 64); err == nil {
-// 			return num
-// 		}
-// 	}
-// 	return 0 // 其他无法解析的情况返回0
-// }

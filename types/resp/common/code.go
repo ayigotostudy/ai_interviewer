@@ -31,6 +31,22 @@ const (
 )
 
 const (
+	// 用户
+	CodeCreateUserFail int64 = 2401 + iota
+	CodeUpdateUserFail
+)
+
+const (
+	// 面试
+	CodeCreateMeetingFail int64 = 2501 + iota
+	CodeUpdateMeetingFail
+	CodeMeetingNotExist
+	CodeResumeNotExist
+	CodeInterviewEnded
+	CodeInterviewRoundLimit
+)
+
+const (
 	// 订单
 	CodeOrderStatusErr int64 = 2201 + iota
 )
@@ -89,4 +105,16 @@ var Msg = map[int64]string{
 	CodeServerBusy:        "服务繁忙",
 	CodeRecordNotFound:    "未查询到该记录",
 	CodeRateLimitExceeded: "操作频率过快 ,请稍后再试",
+
+	// 用户
+	CodeCreateUserFail: "创建用户失败",
+	CodeUpdateUserFail: "修改用户失败",
+
+	// 面试
+	CodeCreateMeetingFail:   "创建面试失败",
+	CodeUpdateMeetingFail:   "更新面试失败",
+	CodeMeetingNotExist:     "面试记录不存在",
+	CodeResumeNotExist:      "简历不存在",
+	CodeInterviewEnded:      "面试已结束",
+	CodeInterviewRoundLimit: "面试已达到最大轮数限制",
 }
