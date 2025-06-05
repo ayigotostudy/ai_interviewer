@@ -2,6 +2,7 @@ package userService
 
 import (
 	"ai_jianli_go/internal/dao"
+	"ai_jianli_go/logs"
 	"ai_jianli_go/pkg/utils"
 	"ai_jianli_go/types/model"
 	"ai_jianli_go/types/req"
@@ -20,6 +21,7 @@ func NewUserService(dao *dao.UserDAO) *UserService {
 func (s *UserService) Register(request *req.RegisterReq) int64 {
 	_, err := s.dao.GetUserByEmail(request.Email)
 	if err == nil {
+		logs.SugarLogger.Errorf("用户注册失败，邮箱已存在: %s", request.Email)
 		return common.CodeUserExist
 	}
 	encPwd := utils.Encrypt(request.Password)
@@ -29,6 +31,7 @@ func (s *UserService) Register(request *req.RegisterReq) int64 {
 	}
 	err = s.dao.CreateUser(user)
 	if err != nil {
+		logs.SugarLogger.Errorf("创建用户失败: %v", err)
 		return common.CodeCreateUserFail
 	}
 	return common.CodeSuccess
@@ -40,13 +43,16 @@ func (s *UserService) Login(request *req.LoginReq) (any, int64) {
 		Token: "",
 	}
 	if err != nil {
+		logs.SugarLogger.Errorf("用户登录失败，用户不存在: %s", request.Email)
 		return res, common.CodeUserNotExist
 	}
 	if user.PassWord != utils.Encrypt(request.Password) {
+		logs.SugarLogger.Errorf("用户登录失败，密码错误: %s", request.Email)
 		return res, common.CodeInvalidPassword
 	}
 	token, err := utils.GetToken(user.ID, user.Role)
 	if err != nil {
+		logs.SugarLogger.Errorf("生成token失败: %v", err)
 		return res, common.CodeServerBusy
 	}
 

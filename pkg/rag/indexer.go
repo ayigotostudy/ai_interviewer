@@ -22,7 +22,7 @@ func initIndexer(ctx context.Context, emb *openai.Embedder) (err error) {
 		},
 	)
 
-	//createIndex(ctx, client)
+	// createIndex(ctx, client)
 
 	// create es indexer component
 	indexer, err = ri.NewIndexer(ctx, &ri.IndexerConfig{

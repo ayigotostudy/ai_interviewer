@@ -95,8 +95,14 @@ const apiRequest = async (endpoint, method = 'GET', data = null) => {
         'Accept': 'application/json'
     };
 
-    const token = getToken();
-    if (token) {
+    // 非登录注册接口都需要携带 token
+    if (!endpoint.includes('/user/login') && !endpoint.includes('/user/register')) {
+        const token = getToken();
+        if (!token) {
+            showError('请先登录');
+            window.location.href = 'index.html';
+            return;
+        }
         headers['Authorization'] = `Bearer ${token}`;
     }
 
@@ -110,18 +116,19 @@ const apiRequest = async (endpoint, method = 'GET', data = null) => {
         const response = await fetch(url, {
             method,
             headers,
-            body: data ? JSON.stringify(data) : null,
-            credentials: 'same-origin',
+            body: method !== 'GET' ? JSON.stringify(data) : null,
+            credentials: 'include',
             mode: 'cors'
         });
 
         console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
         const result = await response.json();
         console.log('Response data:', result);
         
+        if (!response.ok) {
+            throw new Error(result.msg || `HTTP error! status: ${response.status}`);
+        }
+
         if (result.code !== 1000) {
             throw new Error(result.msg || '请求失败');
         }
@@ -140,8 +147,12 @@ const apiRequest = async (endpoint, method = 'GET', data = null) => {
 const register = async (email, password) => {
     try {
         console.log('Registering user:', { email });
-        await apiRequest('/user/register', 'POST', { email, password });
+        const result = await apiRequest('/user/register', 'POST', { 
+            email, 
+            password 
+        });
         showSuccess('注册成功，请登录');
+        return result;
     } catch (error) {
         console.error('Register failed:', error);
         throw error;
@@ -151,7 +162,10 @@ const register = async (email, password) => {
 const login = async (email, password) => {
     try {
         console.log('Logging in user:', { email });
-        const result = await apiRequest('/user/login', 'POST', { email, password });
+        const result = await apiRequest('/user/login', 'POST', { 
+            email, 
+            password 
+        });
         setToken(result.token);
         setUserId(result.user_id);
         setUserEmail(email);
@@ -166,8 +180,12 @@ const login = async (email, password) => {
 const createMeeting = async (meetingData) => {
     try {
         const result = await apiRequest('/meeting', 'POST', {
-            user_id: getUserId(),
-            ...meetingData
+            candidate: meetingData.candidate,
+            position: meetingData.position,
+            job_description: meetingData.jobDescription,
+            time: Date.now(),
+            status: '进行中',
+            remark: ''
         });
         showSuccess('面试创建成功');
         await loadMeetings();
@@ -182,8 +200,11 @@ const updateMeeting = async (meetingId, meetingData) => {
     try {
         const result = await apiRequest('/meeting', 'PUT', {
             id: meetingId,
-            user_id: getUserId(),
-            ...meetingData
+            candidate: meetingData.candidate,
+            position: meetingData.position,
+            job_description: meetingData.jobDescription,
+            status: meetingData.status,
+            remark: meetingData.remark || ''
         });
         showSuccess('面试更新成功');
         await loadMeetings();
@@ -196,8 +217,8 @@ const updateMeeting = async (meetingId, meetingData) => {
 
 const getMeeting = async (meetingId) => {
     try {
-        const result = await apiRequest('/meeting', 'GET', { id: meetingId });
-        return result.data;
+        const result = await apiRequest(`/meeting?id=${meetingId}`, 'GET');
+        return result;
     } catch (error) {
         console.error('Get meeting failed:', error);
         throw error;
@@ -206,7 +227,7 @@ const getMeeting = async (meetingId) => {
 
 const deleteMeeting = async (meetingId) => {
     try {
-        const result = await apiRequest('/meeting', 'DELETE', { id: meetingId });
+        const result = await apiRequest(`/meeting?id=${meetingId}`, 'DELETE');
         showSuccess('面试删除成功');
         await loadMeetings();
         return result;
@@ -216,22 +237,143 @@ const deleteMeeting = async (meetingId) => {
     }
 };
 
+// AI面试相关
+let currentMeetingId = null;
+
+const showAIInterviewForm = async (meetingId) => {
+    currentMeetingId = meetingId;
+    const chatWindow = document.getElementById('interviewChat');
+    if (!chatWindow) {
+        showError('聊天窗口初始化失败');
+        return;
+    }
+
+    chatWindow.style.display = 'flex';
+    chatWindow.innerHTML = ''; // 清空聊天记录
+
+    // 检查是否已上传简历
+    try {
+        const meeting = await getMeeting(meetingId);
+        if (!meeting.resume) {
+            // 显示上传简历提示
+            addMessageToChat('ai', '请先上传简历，以便开始面试。');
+            // 显示简历上传区域
+            const resumeInput = document.createElement('div');
+            resumeInput.className = 'resume-upload';
+            resumeInput.innerHTML = `
+                <textarea id="resumeInput" class="cyber-input" placeholder="请粘贴简历内容..."></textarea>
+                <button onclick="uploadResumeAndStart()" class="cyber-button">
+                    <span class="glow-text">上传简历</span>
+                </button>
+            `;
+            chatWindow.appendChild(resumeInput);
+            return;
+        }
+
+        // 如果已有简历，直接开始面试
+        addMessageToChat('ai', '你好，我是AI面试官。请开始你的面试。');
+    } catch (error) {
+        showError('获取面试信息失败：' + error.message);
+        hideAIInterviewForm();
+    }
+};
+
+const uploadResumeAndStart = async () => {
+    if (!currentMeetingId) {
+        showError('面试已结束');
+        return;
+    }
+
+    const resumeInput = document.getElementById('resumeInput');
+    const resume = resumeInput.value.trim();
+    
+    if (!resume) {
+        showError('请输入简历内容');
+        return;
+    }
+
+    try {
+        await uploadResume(currentMeetingId, resume);
+        showSuccess('简历上传成功');
+        
+        // 移除简历上传区域
+        const resumeUpload = document.querySelector('.resume-upload');
+        if (resumeUpload) {
+            resumeUpload.remove();
+        }
+
+        // 开始面试
+        addMessageToChat('ai', '你好，我是AI面试官。请开始你的面试。');
+    } catch (error) {
+        showError('上传简历失败：' + error.message);
+    }
+};
+
+const hideAIInterviewForm = () => {
+    const chatWindow = document.getElementById('interviewChat');
+    if (chatWindow) {
+        chatWindow.style.display = 'none';
+    }
+    currentMeetingId = null;
+};
+
+const sendAnswerToAI = async () => {
+    if (!currentMeetingId) {
+        showError('面试已结束');
+        return;
+    }
+
+    const answerInput = document.getElementById('answerInput');
+    const answer = answerInput.value.trim();
+    
+    if (!answer) {
+        showError('请输入回答');
+        return;
+    }
+
+    try {
+        // 显示用户回答
+        addMessageToChat('user', answer);
+        answerInput.value = ''; // 清空输入框
+
+        // 发送回答到服务器
+        const result = await sendAnswer(currentMeetingId, answer);
+        
+        // 显示AI回复
+        addMessageToChat('ai', result.reply);
+    } catch (error) {
+        showError('发送回答失败：' + error.message);
+    }
+};
+
+// 修改面试列表项，添加开始面试按钮
 const loadMeetings = async () => {
     try {
-        const result = await apiRequest('/meeting/list', 'GET');
+        const meetings = await apiRequest('/meeting/list', 'GET');
+        console.log('Meetings data:', meetings);
         const meetingList = document.getElementById('meetingList');
         
-        meetingList.innerHTML = result.data.map(meeting => `
+        if (!Array.isArray(meetings)) {
+            console.error('Expected meetings to be an array, got:', meetings);
+            return;
+        }
+
+        meetingList.innerHTML = meetings.map(meeting => `
             <div class="meeting-item" data-id="${meeting.id}">
                 <h3>${meeting.candidate}</h3>
                 <p>职位：${meeting.position}</p>
                 <p>状态：${meeting.status}</p>
+                <p>时间：${new Date(meeting.time).toLocaleString()}</p>
+                <p>备注：${meeting.remark || '无'}</p>
                 <div class="meeting-actions">
                     <button onclick="editMeeting(${meeting.id})" class="cyber-button small">
                         <span class="glow-text">编辑</span>
                     </button>
                     <button onclick="deleteMeeting(${meeting.id})" class="cyber-button small">
                         <span class="glow-text">删除</span>
+                    </button>
+                    <button onclick="showChat(${meeting.id})" class="cyber-button small">
+                        <span class="glow-text">开始面试</span>
                     </button>
                 </div>
             </div>
@@ -245,9 +387,8 @@ const loadMeetings = async () => {
 const uploadResume = async (meetingId, resume) => {
     try {
         const result = await apiRequest('/meeting/upload_resume', 'POST', {
-            user_id: getUserId(),
             meeting_id: meetingId,
-            resume
+            resume: resume
         });
         showSuccess('简历上传成功');
         return result;
@@ -261,9 +402,8 @@ const uploadResume = async (meetingId, resume) => {
 const sendAnswer = async (meetingId, answer) => {
     try {
         const result = await apiRequest('/meeting/ai_interview', 'POST', {
-            user_id: getUserId(),
             meeting_id: meetingId,
-            answer
+            answer: answer
         });
         return result;
     } catch (error) {
@@ -322,29 +462,13 @@ const showRegisterForm = () => {
 };
 
 const showCreateMeetingForm = () => {
-    const form = document.createElement('div');
-    form.className = 'meeting-form';
-    form.innerHTML = `
-        <h2>创建面试</h2>
-        <form id="createMeetingForm">
-            <div class="form-group">
-                <input type="text" id="candidate" required class="cyber-input">
-                <label for="candidate">候选人姓名</label>
-            </div>
-            <div class="form-group">
-                <input type="text" id="position" required class="cyber-input">
-                <label for="position">应聘职位</label>
-            </div>
-            <div class="form-group">
-                <textarea id="jobDescription" required class="cyber-input"></textarea>
-                <label for="jobDescription">职位描述</label>
-            </div>
-            <button type="submit" class="cyber-button">
-                <span class="glow-text">创建</span>
-            </button>
-        </form>
-    `;
-    document.body.appendChild(form);
+    const form = document.getElementById('createMeetingForm');
+    form.style.display = 'flex';
+};
+
+const hideCreateMeetingForm = () => {
+    const form = document.getElementById('createMeetingForm');
+    form.style.display = 'none';
 };
 
 const addMessageToChat = (type, content) => {
@@ -355,6 +479,72 @@ const addMessageToChat = (type, content) => {
     chatWindow.appendChild(messageDiv);
     chatWindow.scrollTop = chatWindow.scrollHeight;
 };
+
+// 聊天窗口相关变量
+let isDragging = false;
+let currentX;
+let currentY;
+let initialX;
+let initialY;
+let xOffset = 0;
+let yOffset = 0;
+let chatWindow = document.getElementById("interviewChat");
+let chatHeader = document.getElementById("chatHeader");
+let chatContent = document.getElementById("chatContent");
+
+// 拖拽相关函数
+function dragStart(e) {
+    if (e.target === chatHeader || e.target.parentNode === chatHeader) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+
+        if (e.target === chatHeader || e.target.parentNode === chatHeader) {
+            isDragging = true;
+        }
+    }
+}
+
+function dragEnd(e) {
+    initialX = currentX;
+    initialY = currentY;
+    isDragging = false;
+}
+
+function drag(e) {
+    if (isDragging) {
+        e.preventDefault();
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+
+        xOffset = currentX;
+        yOffset = currentY;
+
+        setTranslate(currentX, currentY, chatWindow);
+    }
+}
+
+function setTranslate(xPos, yPos, el) {
+    el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+}
+
+// 聊天窗口控制函数
+function showChat(meetingId) {
+    currentMeetingId = meetingId;
+    chatWindow.style.display = 'flex';
+    chatContent.innerHTML = ''; // 清空聊天记录
+    document.getElementById('answerInput').value = '';
+}
+
+function minimizeChat() {
+    chatWindow.style.display = 'none';
+}
+
+function closeChat() {
+    chatWindow.style.display = 'none';
+    chatContent.innerHTML = '';
+    document.getElementById('answerInput').value = '';
+    currentMeetingId = null;
+}
 
 // 事件监听器
 document.addEventListener('DOMContentLoaded', () => {
@@ -404,20 +594,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 创建面试表单处理
-    const createMeetingForm = document.getElementById('createMeetingForm');
-    if (createMeetingForm) {
-        createMeetingForm.addEventListener('submit', async (e) => {
+    const meetingForm = document.getElementById('meetingForm');
+    if (meetingForm) {
+        meetingForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const meetingData = {
                 candidate: document.getElementById('candidate').value,
                 position: document.getElementById('position').value,
-                job_description: document.getElementById('jobDescription').value,
-                time: Date.now(),
-                status: '进行中'
+                jobDescription: document.getElementById('jobDescription').value
             };
             try {
                 await createMeeting(meetingData);
-                document.querySelector('.meeting-form').remove();
+                hideCreateMeetingForm();
+                meetingForm.reset();
             } catch (error) {
                 showError('创建面试失败：' + error.message);
             }
@@ -433,6 +622,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // 加载面试列表
     if (window.location.pathname.includes('dashboard.html')) {
         loadMeetings();
+    }
+
+    // 初始化聊天窗口
+    const chatWindow = document.getElementById('interviewChat');
+    const chatHeader = document.getElementById('chatHeader');
+    const answerInput = document.getElementById('answerInput');
+
+    if (chatWindow && chatHeader) {
+        // 初始化拖拽事件监听
+        chatHeader.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        // 添加回车发送功能
+        if (answerInput) {
+            answerInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    sendAnswerToAI();
+                }
+            });
+        }
     }
 });
 

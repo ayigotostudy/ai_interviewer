@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"ai_jianli_go/logs"
 	"ai_jianli_go/pkg/utils"
 	"net/http"
 	"strings"
@@ -13,6 +14,7 @@ func Auth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		t := ctx.GetHeader("Authorization") //得到字串开头
 		if t == "" || !strings.HasPrefix(t, "Bearer ") {
+			logs.SugarLogger.Errorf("认证失败，无效的Authorization头: %s", t)
 			ctx.JSON(http.StatusUnauthorized, "bearer解析失败")
 			ctx.Abort()
 			return
@@ -21,6 +23,7 @@ func Auth() gin.HandlerFunc {
 		t = t[7:]                          //扔掉头部
 		tk, c, r, e := utils.ParseToken(t) //c为claim结构体的实例
 		if e != nil || !tk.Valid {
+			logs.SugarLogger.Errorf("认证失败，token解析错误: %v", e)
 			ctx.JSON(http.StatusUnauthorized, "token解析失败")
 			ctx.Abort() //中间件不通过
 			return

@@ -11,6 +11,7 @@ type MeetingDAO struct {
 }
 
 func NewMeetingDAO(db *gorm.DB) *MeetingDAO {
+
 	return &MeetingDAO{db: db}
 }
 

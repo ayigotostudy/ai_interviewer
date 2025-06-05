@@ -5,6 +5,7 @@ import (
 	meetingService "ai_jianli_go/internal/service/meeting"
 	"ai_jianli_go/types/req"
 	"ai_jianli_go/types/resp/common"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +24,7 @@ func (mc *MeetingController) Create(c *gin.Context) {
 		ctrl.NoDataJSON(common.CodeInvalidParams)
 		return
 	}
+	ctrl.Request.UserID = c.GetUint("id")
 	code := mc.svc.Create(ctrl.Request)
 	ctrl.NoDataJSON(code)
 }
@@ -33,16 +35,22 @@ func (mc *MeetingController) Update(c *gin.Context) {
 		ctrl.NoDataJSON(common.CodeInvalidParams)
 		return
 	}
+	ctrl.Request.UserID = c.GetUint("id")
 	code := mc.svc.Update(ctrl.Request)
 	ctrl.NoDataJSON(code)
 }
 
 func (mc *MeetingController) Get(c *gin.Context) {
 	ctrl := controller.NewCtrl[req.GetMeetingReq](c)
-	if err := c.Bind(ctrl.Request); err != nil {
+
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64) // 参数：字符串, 进制(10), 位数(64)
+	if err != nil {
 		ctrl.NoDataJSON(common.CodeInvalidParams)
 		return
 	}
+
+	ctrl.Request.ID = uint(id)
+
 	meeting, code := mc.svc.Get(ctrl.Request.ID)
 	if code != common.CodeSuccess {
 		ctrl.NoDataJSON(code)
@@ -79,6 +87,7 @@ func (mc *MeetingController) UploadResume(c *gin.Context) {
 		ctrl.NoDataJSON(common.CodeInvalidParams)
 		return
 	}
+	ctrl.Request.UserID = c.GetUint("id")
 	code := mc.svc.UploadResume(ctrl.Request)
 	ctrl.NoDataJSON(code)
 }
@@ -90,6 +99,7 @@ func (mc *MeetingController) AIInterview(c *gin.Context) {
 		ctrl.NoDataJSON(common.CodeInvalidParams)
 		return
 	}
+	ctrl.Request.UserID = c.GetUint("id")
 	reply, code := mc.svc.AIInterview(ctrl.Request)
 	if code != common.CodeSuccess {
 		ctrl.NoDataJSON(code)

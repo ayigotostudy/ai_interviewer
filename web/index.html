@@ -1,30 +1,24 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI简历助手 - 登录</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>AI面试助手 - 登录</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="login-page">
+<body>
     <canvas id="particleCanvas"></canvas>
-    
-    <!-- 加载动画 -->
-    <div id="loading" class="loading-overlay">
-        <div class="loading-spinner"></div>
-    </div>
-    
-    <div class="login-container">
-        <div class="login-box">
-            <h1 class="cyber-title">AI简历助手</h1>
-            <form id="loginForm" class="login-form">
+    <div class="container">
+        <div class="login-form">
+            <h2>登录</h2>
+            <form id="loginForm" method="POST">
                 <div class="form-group">
-                    <input type="email" id="email" required class="cyber-input">
+                    <input type="email" id="email" name="email" required class="cyber-input">
                     <label for="email">邮箱</label>
                     <div class="input-line"></div>
                 </div>
                 <div class="form-group">
-                    <input type="password" id="password" required class="cyber-input">
+                    <input type="password" id="password" name="password" required class="cyber-input">
                     <label for="password">密码</label>
                     <div class="input-line"></div>
                 </div>
@@ -38,7 +32,9 @@
             </form>
         </div>
     </div>
-
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+    </div>
     <script src="script.js"></script>
 </body>
 </html> 

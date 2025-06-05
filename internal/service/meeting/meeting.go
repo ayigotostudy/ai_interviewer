@@ -2,6 +2,7 @@ package meetingService
 
 import (
 	"ai_jianli_go/internal/dao"
+	"ai_jianli_go/logs"
 	"ai_jianli_go/pkg/rag"
 	"ai_jianli_go/types/model"
 	"ai_jianli_go/types/req"
@@ -34,7 +35,9 @@ func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 		Status:         request.Status,
 		Remark:         request.Remark,
 	}
-	if err := s.dao.Create(meeting); err != nil {
+	err := s.dao.Create(meeting)
+	if err != nil {
+		logs.SugarLogger.Errorf("创建面试记录失败: %v", err)
 		return common.CodeCreateMeetingFail
 	}
 	return common.CodeSuccess
@@ -43,8 +46,10 @@ func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 func (s *MeetingService) Update(request *req.UpdateMeetingReq) int64 {
 	meeting, err := s.dao.GetByID(request.ID)
 	if err != nil {
+		logs.SugarLogger.Errorf("获取面试记录失败: %v", err)
 		return common.CodeMeetingNotExist
 	}
+
 	if request.UserID != 0 {
 		meeting.UserID = request.UserID
 	}
@@ -66,13 +71,10 @@ func (s *MeetingService) Update(request *req.UpdateMeetingReq) int64 {
 	if request.Remark != "" {
 		meeting.Remark = request.Remark
 	}
-	if request.InterviewRecord != "" {
-		meeting.InterviewRecord = request.InterviewRecord
-	}
-	if request.InterviewSummary != "" {
-		meeting.InterviewSummary = request.InterviewSummary
-	}
-	if err := s.dao.Update(meeting); err != nil {
+
+	err = s.dao.Update(meeting)
+	if err != nil {
+		logs.SugarLogger.Errorf("更新面试记录失败: %v", err)
 		return common.CodeUpdateMeetingFail
 	}
 	return common.CodeSuccess
@@ -81,6 +83,7 @@ func (s *MeetingService) Update(request *req.UpdateMeetingReq) int64 {
 func (s *MeetingService) Get(id uint) (*model.Meeting, int64) {
 	meeting, err := s.dao.GetByID(id)
 	if err != nil {
+		logs.SugarLogger.Errorf("获取面试记录失败: %v", err)
 		return nil, common.CodeMeetingNotExist
 	}
 	return meeting, common.CodeSuccess
@@ -89,20 +92,25 @@ func (s *MeetingService) Get(id uint) (*model.Meeting, int64) {
 func (s *MeetingService) List() ([]model.Meeting, int64) {
 	meetings, err := s.dao.List()
 	if err != nil {
+		logs.SugarLogger.Errorf("获取面试列表失败: %v", err)
 		return nil, common.CodeServerBusy
 	}
 	return meetings, common.CodeSuccess
 }
 
 func (s *MeetingService) Delete(id uint) int64 {
-	if err := s.dao.Delete(id); err != nil {
+	err := s.dao.Delete(id)
+	if err != nil {
+		logs.SugarLogger.Errorf("删除面试记录失败: %v", err)
 		return common.CodeServerBusy
 	}
 	return common.CodeSuccess
 }
 
 func (s *MeetingService) UploadResume(request *req.UploadResumeReq) int64 {
-	if err := s.dao.UploadResume(request.MeetingID, request.Resume); err != nil {
+	err := s.dao.UploadResume(request.MeetingID, request.Resume)
+	if err != nil {
+		logs.SugarLogger.Errorf("上传简历失败: %v", err)
 		return common.CodeServerBusy
 	}
 	return common.CodeSuccess
@@ -118,6 +126,17 @@ func (s *MeetingService) GetResume(meetingID uint) (string, int64) {
 
 // AI面试主流程
 func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64) {
+	meeting, err := s.dao.GetByID(request.MeetingID)
+	if err != nil {
+		logs.SugarLogger.Errorf("获取面试记录失败: %v", err)
+		return "", common.CodeMeetingNotExist
+	}
+
+	if meeting.Resume == "" {
+		logs.SugarLogger.Errorf("面试记录 %d 未上传简历", request.MeetingID)
+		return "", common.CodeResumeNotExist
+	}
+
 	// 1. 获取简历内容
 	resume, code := s.GetResume(request.MeetingID)
 	if code != common.CodeSuccess {
@@ -125,7 +144,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	}
 
 	// 2. 获取面试信息
-	meeting, code := s.Get(request.MeetingID)
+	meeting, code = s.Get(request.MeetingID)
 	if code != common.CodeSuccess {
 		return "", code
 	}
@@ -140,21 +159,26 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		},
 	})
 
-	con := memory.GetConversation(fmt.Sprintf("%d", request.MeetingID), true)
+	con := memory.GetConversation(fmt.Sprintf("%d", request.MeetingID), false)
 
 	// 检查面试轮数
 	if con.GetRoundCount() >= 20 {
 		meeting.Status = "已完成"
 		if err := s.dao.Update(meeting); err != nil {
+			logs.SugarLogger.Errorf("更新面试轮数失败: %v", err)
 			return "", common.CodeServerBusy
 		}
 		return "", common.CodeInterviewRoundLimit
 	}
 
+	if con.GetLastConversationsKnowledge() == "" {
+		con.SetLastConversationKnowledge(resume)
+	}
 	// 4. 获取知识库相关内容
 	retriever := rag.GetRetriever()
 	docs, err := retriever.Retrieve(ctx, con.GetLastConversationsKnowledge())
 	if err != nil {
+		logs.SugarLogger.Errorf("获取检索器失败: %v", err)
 		return "", common.CodeServerBusy
 	}
 
@@ -175,6 +199,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		APIKey:  "sk-Xs5rROO2htFLGMJh407b42F505Fe4c89A8510f7608E52c2f",
 	})
 	if err != nil {
+		logs.SugarLogger.Errorf("模型初始化失败: %v", err)
 		return "", common.CodeServerBusy
 	}
 
@@ -183,14 +208,14 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		schema.SystemMessage(
 			"你是一个专业面试官，需要完成以下任务：\n"+
 				"1. 基于专业知识库内容提出精准问题\n"+
-				"2. 对用户回答进行结构化评价（优点/不足）\n"+
+				"2. 对用户回答进行结构化评价（优点/不足）， 评价后要接着提出问题\n"+
 				"3. 针对不足点给出专业解释\n"+
 				"4. 根据用户回答生成1-4轮深度追问， 追问结束继续根据简历内容提问\n"+
 				"5. 每次回答都需要返回要问的知识点（关键词）以便后续知识库检索提问\n\n"+
 				"6. 追问每次只追问一道题目， 后续在根据用户回答继续追问，最多追问4轮\n"+
 				"7. 如果用户表示不会， 请不要继续追问， 提问简历的其他知识点\n"+
 				"8. 当前是第"+fmt.Sprintf("%d", con.GetRoundCount()+1)+"轮面试，总共20轮\n"+
-				"9. 如果用户回答与面试内容无关， 请统一提醒它正在面试（返回知识点继承上次对话的）"+
+				"9. 如果用户回答与面试内容无关， 请统一提醒它正在面试（返回知识点继承上次对话的）\n"+
 				"当前知识库上下文：{context}\n\n"+
 				"当前对话记录：{history}\n\n"+
 				"用户简历内容:{resume}\n"+
@@ -202,7 +227,8 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		schema.AssistantMessage(
 			"请按以下结构组织回答：\n"+
 				"1. 评价总结（含具体不足点分析）\n"+
-				"2. 可追问的知识点:knowledgepoint",
+				"2. 可追问的知识点:knowledgepoint\n"+
+				"3. 问题:question\n",
 			[]schema.ToolCall{},
 		),
 	)
@@ -219,6 +245,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	// 9. 生成回答
 	messages, err := template.Format(ctx, prompt)
 	if err != nil {
+		logs.SugarLogger.Errorf("生成回答失败: %v", err)
 		return "", common.CodeServerBusy
 	}
 
@@ -243,6 +270,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	}
 
 	if err := s.dao.Update(meeting); err != nil {
+		logs.SugarLogger.Errorf("更新面试记录失败: %v", err)
 		return "", common.CodeServerBusy
 	}
 

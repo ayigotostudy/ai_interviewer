@@ -13,7 +13,6 @@ import (
 func initMySQL() {
 	conf := config.GetMySQLConfig()
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", conf.User, conf.Pwd, conf.Host, conf.Port, conf.DbName)
-	fmt.Println(dsn)
 	var err error
 	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
@@ -21,6 +20,8 @@ func initMySQL() {
 	if err != nil {
 		panic(err)
 	}
+	// 设置表的字符集为 utf8mb4
+	db.Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci").AutoMigrate(&model.Meeting{})
 	initModel()
 }
 

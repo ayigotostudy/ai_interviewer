@@ -1,7 +1,7 @@
 package req
 
 type CreateMeetingReq struct {
-	UserID         uint   `json:"user_id" binding:"required"`   // 用户ID
+	UserID         uint   `json:"user_id"`                      // 用户ID
 	Candidate      string `json:"candidate" binding:"required"` // 候选人
 	Position       string `json:"position" binding:"required"`  // 职位
 	JobDescription string `json:"job_description"`              // 职位描述
@@ -28,13 +28,13 @@ type GetMeetingReq struct {
 }
 
 type UploadResumeReq struct {
-	UserID    uint   `json:"user_id" binding:"required"`    // 用户ID
+	UserID    uint   `json:"user_id"`                       // 用户ID
 	MeetingID uint   `json:"meeting_id" binding:"required"` // 面试ID
 	Resume    string `json:"resume" binding:"required"`     // 简历内容
 }
 
 type AIInterviewReq struct {
-	UserID    uint   `json:"user_id" binding:"required"`    // 用户ID
+	UserID    uint   `json:"user_id"`                       // 用户ID
 	MeetingID uint   `json:"meeting_id" binding:"required"` // 面试ID
 	Answer    string `json:"answer" binding:"required"`     // 应聘者回答
 }
