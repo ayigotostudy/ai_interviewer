@@ -2,7 +2,7 @@ package resumeController
 
 import (
 	"ai_jianli_go/internal/controller"
-	"ai_jianli_go/internal/service/resume"
+	resumeService "ai_jianli_go/internal/service/resume"
 	"ai_jianli_go/types/req"
 	"ai_jianli_go/types/resp/common"
 	"context"
@@ -27,6 +27,6 @@ func (mc *ResumeController) CreateResume(c *gin.Context) {
 		return
 	}
 	ctrl.Request.UserID = c.GetUint("id")
-	code := mc.svc.CreateResume(context.Background(), ctrl.Request)
-	ctrl.NoDataJSON(code)
+	resume, code := mc.svc.CreateResume(context.Background(), ctrl.Request)
+	ctrl.WithDataJSON(code, resume)
 }

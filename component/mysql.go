@@ -4,6 +4,9 @@ import (
 	"ai_jianli_go/config"
 	"ai_jianli_go/types/model"
 	"fmt"
+	"io"
+
+	"os"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -21,7 +24,7 @@ func initMySQL() {
 		panic(err)
 	}
 	// 设置表的字符集为 utf8mb4
-	db.Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci").AutoMigrate(&model.Meeting{})
+	db.Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci").AutoMigrate(&model.Meeting{}, &model.Resume{}, &model.Template{})
 	initModel()
 }
 
@@ -32,4 +35,20 @@ func GetMySQLDB() *gorm.DB {
 func initModel() {
 	db.AutoMigrate(model.User{})
 	db.AutoMigrate(model.Meeting{})
+	db.AutoMigrate(model.Resume{})
+	db.AutoMigrate(model.Template{})
+	// 初始化模板
+	// initTemplate()
+}
+
+func initTemplate() {
+	db.AutoMigrate(model.Template{})
+	data, _ := os.Getwd()
+	file, _ := os.Open(data + "/template.md")
+	content, _ := io.ReadAll(file)
+	defer file.Close()
+	db.Create(&model.Template{
+		Name:    "默认模板",
+		Content: string(content),
+	})
 }

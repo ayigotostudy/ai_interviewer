@@ -1,6 +1,7 @@
 package rag
 
 import (
+	"ai_jianli_go/component"
 	"context"
 	"fmt"
 	"strings"
@@ -14,15 +15,9 @@ import (
 var retriever *rr.Retriever
 
 func initRetriever(ctx context.Context, emb *openai.Embedder) (err error) {
+	// redis
 
-	client := redis.NewClient(
-		&redis.Options{
-			Addr:          address,
-			Password:      password,
-			Protocol:      2,
-			UnstableResp3: true,
-		},
-	)
+	client := component.GetRedisDB()
 
 	retriever, err = rr.NewRetriever(ctx, &rr.RetrieverConfig{
 		Client:      client,

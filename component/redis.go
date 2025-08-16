@@ -18,5 +18,6 @@ func initRedis() {
 		Addr:     addr,
 		Password: conf.Pwd,
 		DB:       0, // use default DB
+		Protocol: 2,
 	})
 }

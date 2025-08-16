@@ -1,6 +1,9 @@
 package main
 
 import (
+	"ai_jianli_go/component"
+	"ai_jianli_go/config"
+	"ai_jianli_go/logs"
 	"ai_jianli_go/pkg/rag"
 	"context"
 	"os"
@@ -21,6 +24,9 @@ func TestXxx(t *testing.T) {
 	// }
 
 	ctx := context.Background()
+	logs.Init()
+	config.Init()
+	component.Init()
 	rag.Init()
 	// 获取文档
 	docs, err := rag.GetLoader().Load(ctx, document.Source{

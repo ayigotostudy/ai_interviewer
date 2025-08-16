@@ -34,8 +34,8 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/getkin/kin-openapi v0.118.0 // indirect
-	github.com/gin-contrib/cors v1.7.5 // indirect
-	github.com/gin-contrib/pprof v1.5.3 // indirect
+	github.com/gin-contrib/cors v1.7.5
+	github.com/gin-contrib/pprof v1.5.3
 	github.com/gin-contrib/sse v1.0.0 // indirect
 	github.com/go-openapi/jsonpointer v0.21.1 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect

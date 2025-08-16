@@ -1,6 +1,7 @@
 package rag
 
 import (
+	"ai_jianli_go/component"
 	"context"
 	"fmt"
 
@@ -14,15 +15,10 @@ import (
 var indexer *ri.Indexer
 
 func initIndexer(ctx context.Context, emb *openai.Embedder) (err error) {
+	// redis
 
-	client := redis.NewClient(
-		&redis.Options{
-			Addr:     address,
-			Password: password,
-		},
-	)
-
-	// createIndex(ctx, client)
+	client := component.GetRedisDB()
+	//createIndex(ctx, client)
 
 	// create es indexer component
 	indexer, err = ri.NewIndexer(ctx, &ri.IndexerConfig{
@@ -89,7 +85,7 @@ func createIndex(ctx context.Context, client *redis.Client) {
 
 	result, err := client.FTCreate(ctx, indexName, options, schemas...).Result()
 	if err != nil {
-		panic(err)
+		panic("FT.Create failed: " + err.Error())
 	}
 
 	fmt.Println(result) // OK

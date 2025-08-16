@@ -152,7 +152,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	ctx := context.Background()
 	memory := rag.NewRedisMemory(rag.RedisMemoryConfig{
 		MaxWindowSize: 20,
-		RedisOptions: component.GetRedisDB(),
+		RedisOptions:  component.GetRedisDB(),
 	})
 
 	con := memory.GetConversation(fmt.Sprintf("%d", request.MeetingID), false)
@@ -160,7 +160,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	// 检查面试轮数
 	if con.GetRoundCount() >= 20 {
 		meeting.Status = "已完成"
-		if err := s.dao.Update(meeting); err != nil {
+		if err = s.dao.Update(meeting); err != nil {
 			logs.SugarLogger.Errorf("更新面试轮数失败: %v", err)
 			return "", common.CodeServerBusy
 		}
@@ -192,7 +192,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
 		Model:   "gpt-4o",
 		BaseURL: "https://api.vveai.com/v1",
-		APIKey:  "sk-Xs5rROO2htFLGMJh407b42F505Fe4c89A8510f7608E52c2f",
+		APIKey:  "sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81",
 	})
 	if err != nil {
 		logs.SugarLogger.Errorf("模型初始化失败: %v", err)

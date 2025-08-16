@@ -25,18 +25,22 @@ func NewResumeService(dao *dao.ResumeDAO) *ResumeService {
 	return &ResumeService{dao: dao}
 }
 
-func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeRequest) int64 {
+func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeRequest)(*model.Resume, int64) {
 	resume := model.NewResume(req.UserID, req.Name, req.TemplateID)
-	
+
 	// 根据模板ID获取模板内容
 	// 这里假设需要调用模板服务或DAO来获取模板
 	// 为简化示例，这里暂时使用模拟数据
-	templateContent := ""
-	
+	templateModel, err := s.dao.GetTemplate(uint(req.TemplateID))
+	if err != nil {
+		logs.SugarLogger.Errorf("获取模板失败: %v", err)
+		return nil, common.CodeCreateResumeFail
+	}
+
 	// 一次性将req参数赋值给prompt变量
 	promptVars := map[string]any{
 		"role":       "专业简历撰写助手",
-		"template":   templateContent,
+		"template":   templateModel.Content,
 		"basic_info": req.BasicInfo,
 		"work":       req.WorkExp,
 		"demo":       req.ProjectExp,
@@ -44,7 +48,7 @@ func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeR
 		"score":      req.Awards,
 		"info":       req.TargetJob,
 	}
-	
+
 	// 创建模板，使用 FString 格式
 	// 创建模板，使用 FString 格式
 	template := prompt.FromMessages(schema.FString,
@@ -62,7 +66,7 @@ func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeR
 	messages, err := template.Format(context.Background(), promptVars)
 	if err != nil {
 		logs.SugarLogger.Errorf("生成消息失败: %v", err)
-		return common.CodeCreateResumeFail
+		return nil, common.CodeCreateResumeFail
 	}
 
 	// 从配置中获取API密钥，而不是硬编码
@@ -72,26 +76,26 @@ func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeR
 	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
 		Model:   "gpt-4o",
 		BaseURL: "https://api.vveai.com/v1",
-		APIKey:  "sk-Xs5rROO2htFLGMJh407b42F505Fe4c89A8510f7608E52c2f",
+		APIKey:  "sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81",
 	})
 
 	if err != nil {
 		logs.SugarLogger.Errorf("创建聊天模型失败: %v", err)
-		return common.CodeCreateResumeFail
+		return nil, common.CodeCreateResumeFail
 	}
 
 	res, err := chatModel.Generate(ctx, messages)
 
 	if err != nil {
 		logs.SugarLogger.Errorf("创建聊天模型失败: %v", err)
-		return common.CodeCreateResumeFail
+		return nil, common.CodeCreateResumeFail
 	}
 
 	// 解析生成的内容
-	output, err := Write(templateContent, res.Content)
+	output, err := Write(templateModel.Content, res.Content)
 	if err != nil {
 		logs.SugarLogger.Errorf("解析生成的内容失败: %v", err)
-		return common.CodeCreateResumeFail
+		return nil, common.CodeCreateResumeFail
 	}
 
 	// 保存简历
@@ -99,10 +103,10 @@ func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeR
 	err = s.dao.CreateResume(resume)
 	if err != nil {
 		logs.SugarLogger.Errorf("创建简历失败: %v", err)
-		return common.CodeCreateResumeFail
+		return nil, common.CodeCreateResumeFail
 	}
 
-	return common.CodeSuccess
+	return resume, common.CodeSuccess
 }
 
 // Write 解析生成的内容
@@ -121,7 +125,7 @@ func Write(input string, jsonStr string) (string, error) {
 	output, err := tpl.Execute(pongo2.Context(data))
 
 	if err != nil {
-		return "",err
+		return "", err
 	}
 
 	return output, nil

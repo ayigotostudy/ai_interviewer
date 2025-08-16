@@ -66,7 +66,7 @@ func (mc *MeetingController) List(c *gin.Context) {
 		ctrl.NoDataJSON(code)
 		return
 	}
-	ctrl := controller.NewCtrl[any](c)
+	ctrl := controller.NewCtrl[req.NoReq](c)
 	ctrl.WithDataJSON(code, meetings)
 }
 

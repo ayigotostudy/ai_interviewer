@@ -9,10 +9,11 @@ import (
 )
 
 func main() {
+	logs.Init()
 	config.Init()
 	component.Init()
 	rag.Init()
-	logs.Init()
+
 	router := router.Init()
 
 	router.Run(":8080")

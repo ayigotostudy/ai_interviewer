@@ -44,3 +44,9 @@ func (dao *ResumeDAO) UpdateResume(resume *model.Resume) error {
 func (dao *ResumeDAO) DeleteResume(id uint) error {
 	return dao.db.Delete(&model.Resume{}, id).Error
 }
+
+func (dao *ResumeDAO) GetTemplate(id uint) (*model.Template, error) {
+	var template model.Template
+	err := dao.db.Where("id = ?", id).First(&template).Error
+	return &template, err
+}

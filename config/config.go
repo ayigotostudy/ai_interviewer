@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"ai_jianli_go/logs"
 	"os"
 
 	"github.com/spf13/viper"
@@ -60,7 +60,7 @@ func Init() {
 		panic(err)
 	}
 
-	fmt.Println(config)
+	logs.SugarLogger.Infof("config: %v", config)
 }
 
 func GetMySQLConfig() MySQL {

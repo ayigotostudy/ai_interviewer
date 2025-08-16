@@ -8,13 +8,4 @@ const (
 	customExtraFieldName         = "extra_field_number"
 )
 
-var (
-	// redis
-	password = ""               // 本地Redis通常没有密码
-	address  = "localhost:6379" // 使用本地Redis
-)
 
-
-const (
-	
-)
