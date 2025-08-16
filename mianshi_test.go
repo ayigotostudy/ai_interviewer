@@ -24,7 +24,7 @@ func TestXxx(t *testing.T) {
 	rag.Init()
 	// 获取文档
 	docs, err := rag.GetLoader().Load(ctx, document.Source{
-		URI: "./test.pdf",
+		URI: "./test1.pdf",
 	})
 	if err != nil {
 		t.Error("文档解析失败：", err)

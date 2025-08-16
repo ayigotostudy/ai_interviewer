@@ -1,15 +1,17 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	MySQL     `yaml:"mysql"`
-	Redis     `yaml:"redis"`
-	EmailInfo `yaml:"email"`
+	MySQL `yaml:"mysql"`
+	Redis `yaml:"redis"`
+	//EmailInfo `yaml:"email"`
+	Speech `yaml:"speech"`
 }
 
 type MySQL struct {
@@ -34,6 +36,13 @@ type EmailInfo struct {
 	Auth  string `yaml:"auth"`
 }
 
+// Speech contains credentials for ASR service
+type Speech struct {
+	APIKey    string `yaml:"apiKey"`
+	APISecret string `yaml:"apiSecret"`
+	AppID     string `yaml:"appId"`
+}
+
 var config Config
 
 func Init() {
@@ -50,6 +59,8 @@ func Init() {
 	if err = viper.Unmarshal(&config); err != nil {
 		panic(err)
 	}
+
+	fmt.Println(config)
 }
 
 func GetMySQLConfig() MySQL {
@@ -60,6 +71,10 @@ func GetRedisConfig() Redis {
 	return config.Redis
 }
 
-func GetEmailInfo() EmailInfo {
-	return config.EmailInfo
+// func GetEmailInfo() EmailInfo {
+// 	return config.EmailInfo
+// }
+
+func GetSpeechConfig() Speech {
+	return config.Speech
 }

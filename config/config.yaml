@@ -10,12 +10,18 @@ mysql:
 redis:
   host: "124.222.151.35"  # Redis地址
   port: "6379"  # Redis端口
-  pwd: "123456"  # Redis密码
+  pwd: "abc123456"  # Redis密码
 
 # 邮件配置
-email:
-  addr: "smtp.example.com:587"  # SMTP服务器地址和端口
-  host: "smtp.example.com"  # SMTP服务器主机名
-  from: "AI简历助手"  # 发件人名称
-  email: "noreply@example.com"  # 发件人邮箱
-  auth: "your-email-password"  # 邮箱密码或授权码
+# email:
+#   addr: "smtp.example.com:587"  # SMTP服务器地址和端口
+#   host: "smtp.example.com"  # SMTP服务器主机名
+#   from: "AI简历助手"  # 发件人名称
+#   email: "noreply@example.com"  # 发件人邮箱
+#   auth: "your-email-password"  # 邮箱密码或授权码
+
+# 语音识别配置
+speech:
+  apiKey: "f6dc47b55c75955899cde1550154455f"
+  apiSecret: "YzA2YWEzOTNmNGY1YTA3YjhmMzUyNDEz"
+  appId: "af267d58"

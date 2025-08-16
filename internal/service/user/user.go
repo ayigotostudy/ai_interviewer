@@ -21,7 +21,6 @@ func NewUserService(dao *dao.UserDAO) *UserService {
 func (s *UserService) Register(request *req.RegisterReq) int64 {
 	_, err := s.dao.GetUserByEmail(request.Email)
 	if err == nil {
-		logs.SugarLogger.Errorf("用户注册失败，邮箱已存在: %s", request.Email)
 		return common.CodeUserExist
 	}
 	encPwd := utils.Encrypt(request.Password)
@@ -43,11 +42,9 @@ func (s *UserService) Login(request *req.LoginReq) (any, int64) {
 		Token: "",
 	}
 	if err != nil {
-		logs.SugarLogger.Errorf("用户登录失败，用户不存在: %s", request.Email)
 		return res, common.CodeUserNotExist
 	}
 	if user.PassWord != utils.Encrypt(request.Password) {
-		logs.SugarLogger.Errorf("用户登录失败，密码错误: %s", request.Email)
 		return res, common.CodeInvalidPassword
 	}
 	token, err := utils.GetToken(user.ID, user.Role)

@@ -44,6 +44,8 @@ const (
 	CodeResumeNotExist
 	CodeInterviewEnded
 	CodeInterviewRoundLimit
+	CodeDeleteMeetingFail
+	CodeInterviewGenerateFail
 )
 
 const (
@@ -57,6 +59,15 @@ const (
 	CodePayMsgError
 	CodePayIdExpired
 	CodePayRepeat
+)
+
+const (
+	// 简历
+	CodeUploadResumeFail int64 = 2601 + iota
+	CodeCreateResumeFail
+	CodeGenerateResumeFail // 生成简历失败
+	CodeGetTemplateFail     // 获取模板失败
+	CodeGenerateMessageFail // 生成消息失败
 )
 
 const (
@@ -117,4 +128,13 @@ var Msg = map[int64]string{
 	CodeResumeNotExist:      "简历不存在",
 	CodeInterviewEnded:      "面试已结束",
 	CodeInterviewRoundLimit: "面试已达到最大轮数限制",
+	CodeDeleteMeetingFail:   "删除面试失败",
+	CodeInterviewGenerateFail:       "面试生成回答失败",
+
+	// 简历
+	CodeUploadResumeFail: "上传简历失败",
+	CodeCreateResumeFail:    "创建简历失败",
+	CodeGenerateResumeFail:  "生成简历内容失败",
+	CodeGetTemplateFail:     "获取模板失败",
+	CodeGenerateMessageFail: "生成消息失败",
 }

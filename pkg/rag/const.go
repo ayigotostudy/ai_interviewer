@@ -10,6 +10,11 @@ const (
 
 var (
 	// redis
-	password = "123456"
-	address  = "124.222.151.35:6379"
+	password = ""               // 本地Redis通常没有密码
+	address  = "localhost:6379" // 使用本地Redis
+)
+
+
+const (
+	
 )

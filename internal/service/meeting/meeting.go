@@ -1,6 +1,7 @@
 package meetingService
 
 import (
+	"ai_jianli_go/component"
 	"ai_jianli_go/internal/dao"
 	"ai_jianli_go/logs"
 	"ai_jianli_go/pkg/rag"
@@ -14,7 +15,6 @@ import (
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/prompt"
 	"github.com/cloudwego/eino/schema"
-	"github.com/redis/go-redis/v9"
 )
 
 type MeetingService struct {
@@ -102,7 +102,7 @@ func (s *MeetingService) Delete(id uint) int64 {
 	err := s.dao.Delete(id)
 	if err != nil {
 		logs.SugarLogger.Errorf("删除面试记录失败: %v", err)
-		return common.CodeServerBusy
+		return common.CodeDeleteMeetingFail
 	}
 	return common.CodeSuccess
 }
@@ -111,7 +111,7 @@ func (s *MeetingService) UploadResume(request *req.UploadResumeReq) int64 {
 	err := s.dao.UploadResume(request.MeetingID, request.Resume)
 	if err != nil {
 		logs.SugarLogger.Errorf("上传简历失败: %v", err)
-		return common.CodeServerBusy
+		return common.CodeUploadResumeFail
 	}
 	return common.CodeSuccess
 }
@@ -133,7 +133,6 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	}
 
 	if meeting.Resume == "" {
-		logs.SugarLogger.Errorf("面试记录 %d 未上传简历", request.MeetingID)
 		return "", common.CodeResumeNotExist
 	}
 
@@ -153,10 +152,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	ctx := context.Background()
 	memory := rag.NewRedisMemory(rag.RedisMemoryConfig{
 		MaxWindowSize: 20,
-		RedisOptions: &redis.Options{
-			Addr:     "124.222.151.35:6379",
-			Password: "123456",
-		},
+		RedisOptions: component.GetRedisDB(),
 	})
 
 	con := memory.GetConversation(fmt.Sprintf("%d", request.MeetingID), false)
@@ -246,12 +242,13 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	messages, err := template.Format(ctx, prompt)
 	if err != nil {
 		logs.SugarLogger.Errorf("生成回答失败: %v", err)
-		return "", common.CodeServerBusy
+		return "", common.CodeInterviewGenerateFail
 	}
 
 	con.Append(schema.UserMessage(request.Answer))
 	res, err := chatModel.Generate(ctx, messages)
 	if err != nil {
+		logs.SugarLogger.Error(err)
 		return "", common.CodeServerBusy
 	}
 

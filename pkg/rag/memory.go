@@ -13,29 +13,27 @@ import (
 
 type RedisMemoryConfig struct {
 	MaxWindowSize int
-	RedisOptions  *redis.Options
+	RedisOptions  *redis.Client
 }
 
 func GetDefaultRedisMemory() *redisMemory {
 	return NewRedisMemory(RedisMemoryConfig{
 		MaxWindowSize: 6,
-		RedisOptions: &redis.Options{
+		RedisOptions: redis.NewClient(&redis.Options{
 			Addr: "localhost:6379",
-		},
+		}),
 	})
 }
 
 func NewRedisMemory(cfg RedisMemoryConfig) *redisMemory {
 	if cfg.RedisOptions == nil {
-		cfg.RedisOptions = &redis.Options{
+		cfg.RedisOptions = redis.NewClient(&redis.Options{
 			Addr: "localhost:6379",
-		}
+		})
 	}
 
-	client := redis.NewClient(cfg.RedisOptions)
-
 	return &redisMemory{
-		client:        client,
+		client:        cfg.RedisOptions,
 		maxWindowSize: cfg.MaxWindowSize,
 		conversations: make(map[string]*Conversation),
 	}
