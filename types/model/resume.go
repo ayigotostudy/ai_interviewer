@@ -6,7 +6,7 @@ import (
 
 // Resume 简历模型
 type Resume struct {
-	gorm.Model `json:"-"`
+	gorm.Model 
 	UserID     uint   `json:"user_id" gorm:"index"` // 关联用户ID
 	Name       string `json:"name"`                  // 简历名称
 	Content    string `json:"content"`               // 简历内容

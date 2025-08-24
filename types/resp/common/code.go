@@ -68,6 +68,10 @@ const (
 	CodeGenerateResumeFail // 生成简历失败
 	CodeGetTemplateFail     // 获取模板失败
 	CodeGenerateMessageFail // 生成消息失败
+	CodeGetResumeTemplateFail // 获取简历模板失败
+	CodeGetResumeFail        // 获取简历失败
+	CodeGetResumeListFail    // 获取简历列表失败
+	CodeDeleteResumeFail     // 删除简历失败
 )
 
 const (
@@ -136,5 +140,9 @@ var Msg = map[int64]string{
 	CodeCreateResumeFail:    "创建简历失败",
 	CodeGenerateResumeFail:  "生成简历内容失败",
 	CodeGetTemplateFail:     "获取模板失败",
-	CodeGenerateMessageFail: "生成消息失败",
+	CodeGenerateMessageFail:  "生成消息失败",
+	CodeGetResumeTemplateFail: "获取简历模板失败",
+	CodeGetResumeFail:         "获取简历失败",
+	CodeGetResumeListFail:     "获取简历列表失败",
+	CodeDeleteResumeFail:      "删除简历失败",
 }

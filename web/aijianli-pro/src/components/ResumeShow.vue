@@ -1,163 +1,323 @@
 <script setup>
 import { computed } from 'vue';
-import markdownit from 'markdown-it';
-function parseText(input) {
-  const trimmed = input.replace(/^:::\s*start\s*|\s*:::\s*end\s*$/gi, '');
-  const sections = trimmed.split(/\s*:::\s*/).filter(section => section.trim() !== '');
-  const result = sections.map(section => {
-    return section.split('\n').filter(line => line.trim() !== '');
+
+// 定义props
+const props = defineProps({
+  content: {
+    type: String,
+    default: ''
+  }
+});
+
+// 处理简历内容，转换为HTML
+const processedContent = computed(() => {
+  if (!props.content) return '';
+  
+  let content = props.content;
+  
+  // 1. 处理标题
+  content = content.replace(/^# (.*$)/gm, '<h1 class="resume-title">$1</h1>');
+  
+  // 2. 处理二级标题
+  content = content.replace(/^## (.*$)/gm, '<h2 class="section-title">$1</h2>');
+  
+  // 3. 处理联系信息行（包含 | 的行）
+  content = content.replace(/^([^#\n]*\|[^#\n]*)$/gm, '<div class="contact-info">$1</div>');
+  
+  // 4. 处理 ::: start ... ::: end 区块 - 改进版本
+  // 处理标准格式：::: start\n内容\n::: end
+  content = content.replace(/::: start\s*\n([\s\S]*?)\n\s*::: end/g, (match, blockContent) => {
+    console.log('找到标准:::区块:', blockContent);
+    
+    // 清理blockContent，移除多余的空行和空格
+    const cleanedContent = blockContent.trim();
+    const lines = cleanedContent.split('\n').filter(line => line.trim());
+    console.log('处理后的行:', lines);
+    
+    if (lines.length >= 3) {
+      const first = lines[0].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      const second = lines[1].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      const third = lines[2].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      const description = lines.slice(3).join(' ');
+      
+      const result = `
+        <div class="experience-item">
+          <div class="experience-header">
+            <div class="company-info">
+              <h4 class="company-name">${first}</h4>
+              <span class="position">${second}</span>
+            </div>
+            <span class="duration">${third}</span>
+          </div>
+          ${description ? `<p class="description">${description}</p>` : ''}
+        </div>
+      `;
+      
+      console.log('生成的HTML:', result);
+      return result;
+    }
+    console.log(':::区块行数不足，返回原始内容');
+    return match;
   });
   
-  return result;
-}
-
-function FlexboxBlock(md) {
-  // 识别 :::start ... :::end 区块
-  function flexbox_container(state, startLine, endLine, silent) {
-    const start = state.bMarks[startLine] + state.tShift[startLine];
-    const max = state.eMarks[startLine];
-    const marker = ':::';
-    const markerLen = marker.length;
-
-    // 以 :::start 开始
-    if (state.src.slice(start, start + markerLen) !== marker) return false;
-    const params = state.src.slice(start + markerLen, max).trim();
-    if (!/^start\s*$/.test(params)) return false;
-
-    // 查找结尾 :::end
-    let nextLine = startLine + 1;
-    let endMarkerLine = -1;
-    while (nextLine < endLine) {
-      const lineStart = state.bMarks[nextLine] + state.tShift[nextLine];
-      const lineMax = state.eMarks[nextLine];
-      if (
-        state.src.slice(lineStart, lineStart + markerLen) === marker &&
-        /^end\s*$/.test(state.src.slice(lineStart + markerLen, lineMax).trim())
-      ) {
-        endMarkerLine = nextLine;
-        break;
-      }
-      nextLine++;
+  // 处理紧凑格式：::: start 内容 ::: end
+  content = content.replace(/::: start\s+([^:]+?)\s+::: end/g, (match, blockContent) => {
+    console.log('找到紧凑:::区块:', blockContent);
+    
+    const lines = blockContent.split(/\s*\n\s*/).filter(line => line.trim());
+    console.log('处理后的行:', lines);
+    
+    if (lines.length >= 3) {
+      const first = lines[0].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      const second = lines[1].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      const third = lines[2].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      const description = lines.slice(3).join(' ');
+      
+      const result = `
+        <div class="experience-item">
+          <div class="experience-header">
+            <div class="company-info">
+              <h4 class="company-name">${first}</h4>
+              <span class="position">${second}</span>
+            </div>
+            <span class="duration">${third}</span>
+          </div>
+          ${description ? `<p class="description">${description}</p>` : ''}
+        </div>
+      `;
+      
+      console.log('生成的HTML:', result);
+      return result;
     }
-    if (endMarkerLine === -1) return false;
-
-    if (silent) return true;
-
-    // 捕获整个 :::start 到 :::end 之间的原始文本
-    const contentLines = state.getLines(startLine, endMarkerLine + 1, state.blkIndent, false);
-    const token = state.push('flexbox_block', '', 0);
-    token.content = contentLines;
-    token.map = [startLine, endMarkerLine + 1];
-
-    state.line = endMarkerLine + 1; // 跳过已处理行
-    return true;
-  }
-
-
-  md.block.ruler.before('fence', 'flexbox_block', flexbox_container);
-
-  // 渲染规则
-  md.renderer.rules.flexbox_block = (tokens, idx) => {
-    const content = tokens[idx].content;
-    // 解析区块内容
-    const groups = parseText(content);
-
-    let html = `<div class="flexbox">\n`;
-    for (const group of groups) {
-      html += `  <div>\n`;
-      for (const line of group) {
-        html += `    <span>${md.renderInline(line)}</span>\n`;
-      }
-      html += `  </div>\n`;
+    console.log('紧凑:::区块行数不足，返回原始内容');
+    return match;
+  });
+  
+  // 5. 处理粗体文本
+  content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // 6. 处理普通段落
+  content = content.replace(/^([^#\n]*)$/gm, (match) => {
+    if (match.trim() && !match.includes('|') && !match.includes(':::') && !match.startsWith('<')) {
+      return `<p class="section-content">${match}</p>`;
     }
-    html += `</div>\n`;
-    return html;
-  };
-}
-const md = markdownit({ html:true, linkify: true, typographer: true });
-md.use(FlexboxBlock);
+    return match;
+  });
+  
+  // 7. 清理多余的空行
+  content = content.replace(/\n\s*\n/g, '\n');
+  
+  return content;
+});
 
-const input = `# 王xx
-女 ｜ 28.000000岁 ｜ 药剂师 ｜ 本科 ｜ 138-1234-5678 ｜ wangjinlan@example.com
-## 自我评价
-具备扎实的药学背景知识，有较强的研发能力与实验技能，善于团队协作，积极面对挑战，能够快速适应并投入新工作环境。
-
-## 工作经历
-
-::: start
-**广州药业**
-
-:::
-**药剂师**
-
-:::
-**2019年8月至今**
-
-::: end
-负责药品的研发和药效分析，制定并实施药物管理流程；
-
-协助药品注册及相关审核工作，协调跨部门合作项目。
-
-## 项目经历
-
-::: start
-**新型抗生素研发**
-
-:::
-**项目负责人**
-
-:::
-**领导一支由5人组成的团队，进行新型抗生素的研发**
-
-:::
-**2020年6月至2021年12月**
-
-::: end
-项目成功获得了地方研发经费支持，并在国家核心期刊发表相关研究论文。
-
-## 专业技能
-熟练掌握药品研发流程，熟悉GMP规范；
-
-擅长使用HPLC等分析仪器；
-
-具备良好的文献检索与数据分析能力。
-
-## 教育背景与资质
-::: start
-**广东药科大学** | 药学 | 学士学位
-
-:::
-**2015年9月至2019年7月**
-
-::: end
-药师执业资格证，GMP培训合格证`;
-
-const html = computed(() => md.render(input));
+console.log('原始内容:', props.content);
+console.log('处理后的内容:', processedContent.value);
 </script>
 
 <template>
-  <div class="markdown-body" v-html="html"></div>
+  <div class="resume-container">
+    <div v-html="processedContent"></div>
+  </div>
 </template>
 
-<style>
-.flexbox {
+<style scoped>
+.resume-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 60px;
+  background: #FFFFFF;
+  font-family: '阿里巴巴普惠体', 'PingFang SC', 'Helvetica Neue', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  color: #333333;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+}
+
+/* 标题样式 */
+:deep(.resume-title) {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #333333;
+  margin: 0 0 40px 0;
+  text-align: center;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* 分区标题样式 - 醒目的红色 */
+:deep(.section-title) {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #EA0202;
+  margin: 50px 0 25px 0;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #EA0202;
+  position: relative;
+  line-height: 1.3;
+}
+
+:deep(.section-title::after) {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 80px;
+  height: 2px;
+  background: #EA0202;
+}
+
+/* 联系信息样式 */
+:deep(.contact-info) {
+  font-size: 1.1rem;
+  color: #666666;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 40px;
+  line-height: 1.8;
+  padding: 20px;
+  background: #FAFAFA;
+  border-radius: 8px;
+}
+
+/* 段落内容样式 */
+:deep(.section-content) {
+  font-size: 1rem;
+  color: #333333;
+  margin: 0 0 20px 0;
+  line-height: 1.8;
+  text-align: justify;
+}
+
+/* 经历项目样式 */
+:deep(.experience-item) {
+  background: #FAFAFA;
+  border-radius: 12px;
+  padding: 30px;
+  border-left: 4px solid #EA0202;
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+:deep(.experience-item:hover) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  background: #F8F8F8;
+}
+
+:deep(.experience-header) {
   display: flex;
-  gap: 16px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
 }
-.flexbox > div {
-  flex: 1 1 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 4px 8px;
-  background: #f3f3f3;
-  border-radius: 4px;
+
+:deep(.company-info) {
+  flex: 1;
 }
-.markdown-body h1,h2,h3,h4 {
-  margin: 1em 0 0.5em;
+
+:deep(.company-name) {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #333333;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
 }
-.markdown-body p {
-  margin: .5em 0;
+
+:deep(.position) {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #EA0202;
+  background: #FFE6E6;
+  padding: 6px 16px;
+  border-radius: 20px;
+  display: inline-block;
+  line-height: 1.4;
+}
+
+:deep(.duration) {
+  font-size: 0.9rem;
+  color: #666666;
+  font-weight: 500;
+  background: #F0F0F0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+:deep(.description) {
+  font-size: 0.95rem;
+  color: #555555;
+  margin: 0;
+  line-height: 1.8;
+  text-align: justify;
+}
+
+/* 粗体文本样式 */
+:deep(strong) {
+  font-weight: 600;
+  color: #333333;
+}
+
+/* 列表样式 */
+:deep(ul) {
+  margin: 20px 0;
+  padding-left: 25px;
+}
+
+:deep(li) {
+  margin-bottom: 12px;
+  line-height: 1.8;
+  color: #555555;
+}
+
+:deep(ul li) {
+  list-style-type: disc;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .resume-container {
+    padding: 30px 20px;
+    margin: 10px;
+  }
+  
+  :deep(.resume-title) {
+    font-size: 2.2rem;
+    margin-bottom: 30px;
+  }
+  
+  :deep(.section-title) {
+    font-size: 1.4rem;
+    margin: 40px 0 20px 0;
+  }
+  
+  :deep(.experience-header) {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  :deep(.duration) {
+    align-self: flex-start;
+  }
+  
+  :deep(.experience-item) {
+    padding: 25px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .resume-container {
+    padding: 20px 15px;
+  }
+  
+  :deep(.resume-title) {
+    font-size: 1.8rem;
+  }
+  
+  :deep(.section-title) {
+    font-size: 1.2rem;
+  }
 }
 </style>

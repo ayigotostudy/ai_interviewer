@@ -2,6 +2,7 @@ package dao
 
 import (
 	"ai_jianli_go/types/model"
+	"context"
 
 	"gorm.io/gorm"
 )
@@ -9,6 +10,18 @@ import (
 // ResumeDAO 简历数据访问对象
 type ResumeDAO struct {
 	db *gorm.DB
+}
+
+func (dao *ResumeDAO) GetResumeList(ctx context.Context, userID uint) ([]*model.Resume, error) {
+	resumes := make([]*model.Resume, 0)
+	err := dao.db.Where("user_id = ?", userID).Find(&resumes).Error
+	return resumes, err
+}
+
+func (dao *ResumeDAO) GetResume(id uint) (*model.Resume, error) {
+	resume := new(model.Resume)
+	err := dao.db.Where("id = ?", id).First(resume).Error
+	return resume, err
 }
 
 // NewResumeDAO 创建简历DAO实例
@@ -49,4 +62,10 @@ func (dao *ResumeDAO) GetTemplate(id uint) (*model.Template, error) {
 	var template model.Template
 	err := dao.db.Where("id = ?", id).First(&template).Error
 	return &template, err
+}
+
+func (dao *ResumeDAO) GetResumeTemplateList() ([]*model.Template, error) {
+	var templates []*model.Template
+	err := dao.db.Find(&templates).Error
+	return templates, err
 }

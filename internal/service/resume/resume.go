@@ -130,3 +130,39 @@ func Write(input string, jsonStr string) (string, error) {
 
 	return output, nil
 }
+
+func (s *ResumeService) GetResumeTemplate(ctx context.Context) ([]*model.Template, int64) {
+	templates, err := s.dao.GetResumeTemplateList()
+	if err != nil {
+		logs.SugarLogger.Errorf("获取简历模板失败: %v", err)
+		return nil, common.CodeGetResumeTemplateFail
+	}
+	return templates, common.CodeSuccess
+}
+
+func (s *ResumeService) GetResume(ctx context.Context, id uint) (*model.Resume, int64) {
+	resume, err := s.dao.GetResume(id)
+	if err != nil {
+		logs.SugarLogger.Errorf("获取简历失败: %v", err)
+		return nil, common.CodeGetResumeFail
+	}
+	return resume, common.CodeSuccess
+}
+
+func (s *ResumeService) GetResumeList(ctx context.Context, userID uint) ([]*model.Resume, int64) {
+	resumes, err := s.dao.GetResumeList(ctx, userID)
+	if err != nil {
+		logs.SugarLogger.Errorf("获取简历列表失败: %v", err)
+		return nil, common.CodeGetResumeListFail
+	}
+	return resumes, common.CodeSuccess
+}
+
+func (s *ResumeService) DeleteResume(ctx context.Context, id uint) int64 {
+	err := s.dao.DeleteResume(id)
+	if err != nil {
+		logs.SugarLogger.Errorf("删除简历失败: %v", err)
+		return common.CodeDeleteResumeFail
+	}
+	return common.CodeSuccess
+}

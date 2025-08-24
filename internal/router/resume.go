@@ -13,4 +13,8 @@ func resume(r *gin.RouterGroup) {
 	resumeSvc := resumeService.NewResumeService(resumeDAO)
 	resumeCtrl := resumeController.NewResumeController(resumeSvc)
 	r.POST("", resumeCtrl.CreateResume)
+	r.GET("/list", resumeCtrl.GetResumeList)
+	r.GET("", resumeCtrl.GetResume)
+	r.GET("/template", resumeCtrl.GetResumeTemplate)
+	r.DELETE("", resumeCtrl.DeleteResume)
 }

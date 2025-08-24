@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/pprof"
+	_"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,7 +11,7 @@ func Init() *gin.Engine {
 
 	// 使用请求日志中间件
 	// r.Use(middleware.RequestLogger())
-	pprof.Register(r)
+	// pprof.Register(r)
 
 	// 配置CORS
 	config := cors.DefaultConfig()

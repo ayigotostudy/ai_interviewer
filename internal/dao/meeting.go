@@ -48,3 +48,4 @@ func (dao *MeetingDAO) GetResume(candidateID uint) (string, error) {
 	err := dao.db.Select("resume").Where("id = ?", candidateID).First(&meeting).Error
 	return meeting.Resume, err
 }
+

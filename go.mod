@@ -10,7 +10,7 @@ require (
 	github.com/cloudwego/eino-ext/components/indexer/redis v0.0.0-20250604063857-19ef29584858
 	github.com/cloudwego/eino-ext/components/model/openai v0.0.0-20250604063857-19ef29584858
 	github.com/cloudwego/eino-ext/components/retriever/redis v0.0.0-20250604063857-19ef29584858
-	github.com/gin-gonic/gin v1.10.1
+	github.com/gin-gonic/gin v1.10.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/gorilla/websocket v1.5.3
 	github.com/redis/go-redis/v9 v9.9.0

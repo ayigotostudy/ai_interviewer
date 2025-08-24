@@ -10,7 +10,11 @@ const instance = axios.create({
 instance.interceptors.request.use(
 	(config) => {
 	  let token = localStorage.getItem('token')
-	  if (!token) token = ''
+	  
+	  if (!token) {
+	    token = ''
+	  }
+	  console.log('token:', token)
   
 	  config.headers.Authorization = 'Bearer ' + token
 	  return config
@@ -28,9 +32,9 @@ instance.interceptors.request.use(
 	  if (!error.response) {
 		return Promise.reject(error)
 	  }
+	  
 	  if (error.response.status === 401) {
 		Message.error('请先登录账号')
-		// router.push('/login')
 	  }
 	  if (error.response.status === 403) {
 		Message.error('无操作权限')
