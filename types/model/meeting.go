@@ -22,4 +22,5 @@ type Meeting struct {
 	Resume           string         `json:"resume"`               // 简历内容
 	InterviewRecord  string         `json:"interview_record"`     // 面试记录
 	InterviewSummary string         `json:"interview_summary"`    // 面试总结
+	InterviewNumber  int            `json:"interview_number"`     // 面试对话次数
 }

@@ -25,11 +25,12 @@ func NewMeetingService(dao *dao.MeetingDAO) *MeetingService {
 }
 
 const (
-	PLANED = "planed"
+	PLANED       = "planed"
 	INTERVIEWING = "interviewing"
-	COMPLETED = "completed"
+	COMPLETED    = "completed"
 )
 
+// 创建面试
 func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 	meeting := &model.Meeting{
 		UserID:         request.UserID,
@@ -48,6 +49,7 @@ func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 	return common.CodeSuccess
 }
 
+// 更新面试
 func (s *MeetingService) Update(request *req.UpdateMeetingReq) int64 {
 	meeting, err := s.dao.GetByID(request.ID)
 	if err != nil {
@@ -85,6 +87,7 @@ func (s *MeetingService) Update(request *req.UpdateMeetingReq) int64 {
 	return common.CodeSuccess
 }
 
+// 获取面试
 func (s *MeetingService) Get(id uint) (*model.Meeting, int64) {
 	meeting, err := s.dao.GetByID(id)
 	if err != nil {
@@ -94,6 +97,7 @@ func (s *MeetingService) Get(id uint) (*model.Meeting, int64) {
 	return meeting, common.CodeSuccess
 }
 
+// 获取面试列表
 func (s *MeetingService) List() ([]model.Meeting, int64) {
 	meetings, err := s.dao.List()
 	if err != nil {
@@ -103,6 +107,7 @@ func (s *MeetingService) List() ([]model.Meeting, int64) {
 	return meetings, common.CodeSuccess
 }
 
+// 删除面试
 func (s *MeetingService) Delete(id uint) int64 {
 	err := s.dao.Delete(id)
 	if err != nil {
@@ -112,6 +117,7 @@ func (s *MeetingService) Delete(id uint) int64 {
 	return common.CodeSuccess
 }
 
+// 上传简历
 func (s *MeetingService) UploadResume(request *req.UploadResumeReq) int64 {
 	err := s.dao.UploadResume(request.MeetingID, request.Resume)
 	if err != nil {
@@ -121,6 +127,7 @@ func (s *MeetingService) UploadResume(request *req.UploadResumeReq) int64 {
 	return common.CodeSuccess
 }
 
+// 获取简历
 func (s *MeetingService) GetResume(meetingID uint) (string, int64) {
 	resume, err := s.dao.GetResume(meetingID)
 	if err != nil {
@@ -254,22 +261,16 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	con.SetLastConversationKnowledge(knowledgePoint)
 	con.Append(res)
 
-	// 11. 更新面试记录和总结
-	meeting.InterviewRecord = con.String()
-	meeting.InterviewSummary = res.Content
-
 	// 如果达到最大轮数，更新面试状态为已完成
 	if con.GetRoundCount() >= 20 {
 		meeting.Status = COMPLETED
-	} else {
-		meeting.Status = INTERVIEWING
+		meeting.InterviewRecord = con.String()
+		if err := s.dao.Update(meeting); err != nil {
+			logs.SugarLogger.Errorf("更新面试记录失败: %v", err)
+			return "", common.CodeServerBusy
+		}
 	}
-
-	if err := s.dao.Update(meeting); err != nil {
-		logs.SugarLogger.Errorf("更新面试记录失败: %v", err)
-		return "", common.CodeServerBusy
-	}
-
+	
 	return res.Content, common.CodeSuccess
 }
 
@@ -297,6 +298,7 @@ func extractKnowledgePoint(input string) string {
 	return "" // 未找到匹配
 }
 
+// 获取面试评价
 func (s *MeetingService) GetRemark(ctx context.Context, req *req.GetRemarkReq) (string, int64) {
 	meeting, err := s.dao.GetByID(req.MeetingID)
 	if err != nil {

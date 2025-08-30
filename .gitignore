@@ -64,3 +64,6 @@ Thumbs.db
 
 # Web directory to ignore (per user request)
 web/
+
+*.txt
+*.yaml

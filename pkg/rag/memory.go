@@ -168,7 +168,11 @@ func (c *Conversation) GetMessages() []*schema.Message {
 	return c.Messages
 }
 
+// 修改load方法，使其加载整个Conversation对象，包括RoundCount
 func (c *Conversation) load() error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	ctx := context.Background()
 	data, err := c.client.Get(ctx, "conversation:"+c.ID).Result()
 	if err == redis.Nil {
@@ -178,17 +182,34 @@ func (c *Conversation) load() error {
 		return fmt.Errorf("failed to get conversation: %w", err)
 	}
 
-	var messages []*schema.Message
-	if err := json.Unmarshal([]byte(data), &messages); err != nil {
-		return fmt.Errorf("failed to unmarshal messages: %w", err)
+	// 反序列化整个Conversation对象，包括RoundCount
+	conversationData := &Conversation{}
+	if err := json.Unmarshal([]byte(data), conversationData); err != nil {
+		return fmt.Errorf("failed to unmarshal conversation: %w", err)
 	}
-	c.Messages = messages
+
+	// 保留原有指针和配置
+	c.Messages = conversationData.Messages
+	c.RoundCount = conversationData.RoundCount
+	c.LastConversationsKnowledge = conversationData.LastConversationsKnowledge
+	
 	return nil
 }
 
+// 修改save方法，使其保存整个Conversation对象，包括RoundCount
 func (c *Conversation) save() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	ctx := context.Background()
-	data, err := json.Marshal(c.Messages)
+	// 创建一个副本，不包含client和maxWindowSize等不需要序列化的字段
+	serializableData := &Conversation{
+		Messages:                  c.Messages,
+		RoundCount:                c.RoundCount,
+		LastConversationsKnowledge: c.LastConversationsKnowledge,
+	}
+
+	data, err := json.Marshal(serializableData)
 	if err != nil {
 		return
 	}
