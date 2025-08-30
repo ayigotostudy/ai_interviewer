@@ -45,7 +45,7 @@ func (c *SpeechController) Recognize(ctx *gin.Context) {
 	tempFile := filepath.Join(tempDir, "audio_"+time.Now().Format("20060102150405")+".wav")
 
 	// 保存上传的文件
-	if err := ctx.SaveUploadedFile(file, tempFile); err != nil {
+	if err = ctx.SaveUploadedFile(file, tempFile); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error": "保存音频文件失败",
 		})
