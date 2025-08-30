@@ -5,6 +5,7 @@ import (
 	meetingService "ai_jianli_go/internal/service/meeting"
 	"ai_jianli_go/types/req"
 	"ai_jianli_go/types/resp/common"
+	"context"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -106,4 +107,23 @@ func (mc *MeetingController) AIInterview(c *gin.Context) {
 		return
 	}
 	ctrl.WithDataJSON(code, gin.H{"reply": reply})
+}
+
+// 获取面试评价接口
+func (mc *MeetingController) GetRemark(c *gin.Context) {
+	ctrl := controller.NewCtrl[req.GetRemarkReq](c)
+
+	id, err := strconv.ParseUint(c.Query("id"), 10, 64) // 参数：字符串, 进制(10), 位数(64)
+	if err != nil {
+		ctrl.NoDataJSON(common.CodeInvalidParams)
+		return
+	}
+	ctrl.Request.MeetingID = uint(id)
+	ctrl.Request.UserID = c.GetUint("id")
+	meeting, code := mc.svc.GetRemark(context.Background(), ctrl.Request)
+	if code != common.CodeSuccess {
+		ctrl.NoDataJSON(code)
+		return
+	}
+	ctrl.WithDataJSON(code, meeting)
 }

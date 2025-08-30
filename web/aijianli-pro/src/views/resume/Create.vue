@@ -26,24 +26,14 @@
           :class="{ selected: selectedTemplate === template.ID }"
           @click="selectTemplate(template.ID)"
         >
-          <div class="template-preview" :class="getTemplatePreviewClass(template.name)">
-            <div class="preview-header">
-              <h3>{{ template.name }}</h3>
+          <div class="template-info">
+            <div class="template-header">
+              <h4>{{ template.name }}</h4>
               <span class="template-badge" :class="getTemplateBadgeClass(template.name)">
                 {{ getTemplateType(template.name) }}
               </span>
             </div>
-            <div class="preview-content">
-              <div class="preview-line"></div>
-              <div class="preview-line short"></div>
-              <div class="preview-line"></div>
-              <div class="preview-line short"></div>
-              <div class="preview-line"></div>
-            </div>
-          </div>
-          <div class="template-info">
-            <h4>{{ template.name }}</h4>
-            <p>{{ template.content }}</p>
+            <div class="template-description" v-html="renderMarkdown(template.show_content)"></div>
           </div>
         </div>
         
@@ -96,28 +86,15 @@
             </div>
           </div>
 
-          <!-- 用户回答 -->
-          <div v-for="(answer, index) in userAnswers" :key="index" class="message user-message">
-            <div class="message-content">
-              <div class="message-text">{{ answer.content }}</div>
-              <div class="message-time">{{ answer.time }}</div>
-            </div>
+          <!-- 合并后的时间序消息流（从旧到新，直接遍历） -->
+          <div v-for="(msg, i) in messages" :key="i" :class="['message', msg.role === 'user' ? 'user-message' : 'ai-message']">
             <div class="message-avatar">
-              <img src="https://via.placeholder.com/40x40/10B981/ffffff?text=我" alt="我" />
-            </div>
-          </div>
-
-          <!-- AI确认消息 -->
-          <div v-for="(confirmation, index) in aiConfirmations" :key="index" class="message ai-message">
-            <div class="message-avatar">
-              <img src="https://via.placeholder.com/40x40/2563EB/ffffff?text=AI" alt="AI助手" />
+              <img v-if="msg.role==='ai'" src="https://via.placeholder.com/40x40/2563EB/ffffff?text=AI" alt="AI助手" />
+              <img v-else src="https://via.placeholder.com/40x40/10B981/ffffff?text=我" alt="我" />
             </div>
             <div class="message-content">
-              <div class="message-text">
-                <p>好的，我已经记录了：<strong>{{ confirmation.content }}</strong></p>
-                <p v-if="confirmation.nextQuestion">{{ confirmation.nextQuestion }}</p>
-              </div>
-              <div class="message-time">{{ confirmation.time }}</div>
+              <div class="message-text" v-html="msg.html || msg.content"></div>
+              <div class="message-time">{{ msg.time }}</div>
             </div>
           </div>
 
@@ -189,12 +166,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { createResume, getResumeTemplates, type ResumeTemplate } from '@/service/resume'
 
 const router = useRouter()
-const chatContainer = ref<HTMLElement>()
+const chatContainer = ref<HTMLElement | null>(null)
 const inputMessage = ref('')
 const isProcessing = ref(false)
 const isCompleted = ref(false)
@@ -224,6 +201,32 @@ const resumeData = ref({
 // 用户回答记录
 const userAnswers = ref<Array<{ content: string; time: string }>>([])
 const aiConfirmations = ref<Array<{ content: string; nextQuestion: string; time: string }>>([])
+// 统一消息流：按时间顺序渲染，避免用户消息“置顶”观感
+const messages = computed(() => {
+  const ua = userAnswers.value.map(a => ({ role: 'user', content: a.content, time: a.time }))
+  const ac = aiConfirmations.value.map(c => ({ role: 'ai', content: `好的，我已经记录了：<strong>${c.content}</strong>${c.nextQuestion ? `<br/>${c.nextQuestion}` : ''}`, time: c.time, html: true }))
+  // 简单交错：按出现顺序合并（假设每次回答后会有确认）
+  const res: any[] = []
+  const n = Math.max(ua.length, ac.length)
+  for (let i = 0; i < n; i++) {
+    if (ua[i]) res.push(ua[i])
+    if (ac[i]) res.push(ac[i])
+  }
+  return res
+})
+
+// 自动滚动到底部（统一定义）
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    }
+  })
+}
+
+watch(messages, () => {
+  nextTick(() => scrollToBottom())
+})
 
 // 预定义问题
 const questions = [
@@ -485,13 +488,7 @@ const selectTemplate = (id: number) => {
   selectedTemplate.value = id
 }
 
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (chatContainer.value) {
-      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
-    }
-  })
-}
+// 已统一定义在上方
 
 onMounted(() => {
   loadTemplates()
@@ -515,7 +512,7 @@ const loadTemplates = async () => {
           UpdatedAt: '',
           DeletedAt: null,
           name: '经典模板',
-          content: '适合传统行业，布局清晰，重点突出'
+          show_content: '**适用场景：** 传统行业、金融、教育等\n\n**特点：**\n- 布局清晰，层次分明\n- 重点突出，易于阅读\n- 专业稳重，适合正式场合\n\n**推荐职位：** 管理、行政、销售等'
         },
         {
           ID: 2,
@@ -523,7 +520,7 @@ const loadTemplates = async () => {
           UpdatedAt: '',
           DeletedAt: null,
           name: '现代简约',
-          content: '简洁大方，适合互联网和创意行业'
+          show_content: '**适用场景：** 互联网、创意、科技等\n\n**特点：**\n- 设计简洁，视觉清爽\n- 重点突出，信息层次清晰\n- 现代感强，适合年轻职场\n\n**推荐职位：** 设计、开发、产品等'
         }
       ]
     }
@@ -537,7 +534,7 @@ const loadTemplates = async () => {
         UpdatedAt: '',
         DeletedAt: null,
         name: '经典模板',
-        content: '适合传统行业，布局清晰，重点突出'
+        show_content: '**适用场景：** 传统行业、金融、教育等\n\n**特点：**\n- 布局清晰，层次分明\n- 重点突出，易于阅读\n- 专业稳重，适合正式场合\n\n**推荐职位：** 管理、行政、销售等'
       },
       {
         ID: 2,
@@ -545,7 +542,7 @@ const loadTemplates = async () => {
         UpdatedAt: '',
         DeletedAt: null,
         name: '现代简约',
-        content: '简洁大方，适合互联网和创意行业'
+        show_content: '**适用场景：** 互联网、创意、科技等\n\n**特点：**\n- 设计简洁，视觉清爽\n- 重点突出，信息层次清晰\n- 现代感强，适合年轻职场\n\n**推荐职位：** 设计、开发、产品等'
       }
     ]
   } finally {
@@ -562,15 +559,7 @@ const getTemplateType = (name: string) => {
   return '通用'
 }
 
-const getTemplatePreviewClass = (name: string) => {
-  const type = getTemplateType(name);
-  if (type === '经典') return 'classic-preview';
-  if (type === '现代') return 'modern-preview';
-  if (type === '创意') return 'creative-preview';
-  if (type === '商务') return 'professional-preview';
-  if (type === '技术') return 'technical-preview';
-  return '';
-};
+
 
 const getTemplateBadgeClass = (name: string) => {
   const type = getTemplateType(name);
@@ -580,6 +569,36 @@ const getTemplateBadgeClass = (name: string) => {
   if (type === '商务') return 'badge-professional';
   if (type === '技术') return 'badge-technical';
   return '';
+};
+
+// Markdown渲染函数
+const renderMarkdown = (markdown: string) => {
+  if (!markdown) return '';
+  
+  console.log('原始Markdown:', markdown);
+  
+  let content = markdown;
+  
+  // 处理粗体文本
+  content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // 处理列表项 - 简化版本
+  content = content.replace(/^- (.+)$/gm, '<li>$1</li>');
+  
+  // 将连续的li标签包装成ul
+  content = content.replace(/(<li>.*<\/li>)/s, '<ul class="template-list">$1</ul>');
+  
+  // 处理换行
+  content = content.replace(/\n\n/g, '</p><p>');
+  content = content.replace(/\n/g, '<br>');
+  
+  // 包装段落
+  if (!content.startsWith('<')) {
+    content = '<p>' + content + '</p>';
+  }
+  
+  console.log('渲染后的HTML:', content);
+  return content;
 };
 </script>
 
@@ -633,8 +652,8 @@ const getTemplateBadgeClass = (name: string) => {
 
 .templates-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
   margin-bottom: 2rem;
 }
 
@@ -686,16 +705,16 @@ const getTemplateBadgeClass = (name: string) => {
 
 .template-card {
   background: white;
-  border-radius: 15px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 1.5rem;
+  padding: 1rem;
+  height: 160px;
+  max-height: 160px;
 }
 
 .template-card:hover {
@@ -708,48 +727,10 @@ const getTemplateBadgeClass = (name: string) => {
   box-shadow: 0 8px 25px rgba(234, 2, 2, 0.3);
 }
 
-.template-preview {
-  width: 100%;
-  height: 150px;
-  background: #F0F9EB;
-  border-radius: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 1rem;
-  position: relative;
-}
-
-/* 经典模板样式 */
-.classic-preview {
-  background: #FEF3C7;
-}
-
-.classic-preview .preview-header {
-  background: #FDE68A;
-}
-
-.classic-preview .preview-header h3 {
-  color: #D97706;
-}
-
+/* 模板徽章样式 */
 .badge-classic {
   background: #F59E0B;
   color: white;
-}
-
-/* 现代模板样式 */
-.modern-preview {
-  background: #E0F2FE;
-}
-
-.modern-preview .preview-header {
-  background: #BFDBFE;
-}
-
-.modern-preview .preview-header h3 {
-  color: #1E40AF;
 }
 
 .badge-modern {
@@ -757,53 +738,14 @@ const getTemplateBadgeClass = (name: string) => {
   color: white;
 }
 
-/* 创意模板样式 */
-.creative-preview {
-  background: #F3E8FF;
-}
-
-.creative-preview .preview-header {
-  background: #DDD6FE;
-}
-
-.creative-preview .preview-header h3 {
-  color: #7C3AED;
-}
-
 .badge-creative {
   background: #8B5CF6;
   color: white;
 }
 
-/* 商务模板样式 */
-.professional-preview {
-  background: #ECFDF5;
-}
-
-.professional-preview .preview-header {
-  background: #D1FAE5;
-}
-
-.professional-preview .preview-header h3 {
-  color: #065F46;
-}
-
 .badge-professional {
   background: #10B981;
   color: white;
-}
-
-/* 技术模板样式 */
-.technical-preview {
-  background: #FEF2F2;
-}
-
-.technical-preview .preview-header {
-  background: #FECACA;
-}
-
-.technical-preview .preview-header h3 {
-  color: #DC2626;
 }
 
 .badge-technical {
@@ -831,34 +773,33 @@ const getTemplateBadgeClass = (name: string) => {
 .template-badge {
   background: #4CAF50; /* Green badge */
   color: white;
-  padding: 0.3rem 0.8rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.7rem;
   font-weight: 600;
   white-space: nowrap;
 }
 
-.preview-content {
+
+
+.template-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.template-header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
-.preview-line {
-  width: 80%;
-  height: 2px;
-  background: #E0E0E0;
-  border-radius: 1px;
-}
-
-.preview-line.short {
-  width: 50%;
-}
-
-.template-info h4 {
-  margin-top: 0.5rem;
-  font-size: 1.1rem;
+.template-header h4 {
+  margin: 0;
+  font-size: 1rem;
   color: #1F2937;
   font-weight: 600;
 }
@@ -867,6 +808,66 @@ const getTemplateBadgeClass = (name: string) => {
   font-size: 0.9rem;
   color: #6B7280;
   margin-top: 0.3rem;
+}
+
+.template-description {
+  font-size: 0.85rem;
+  color: #6B7280;
+  margin-top: 0.3rem;
+  line-height: 1.4;
+  max-height: 100px;
+  overflow-y: auto;
+  padding-right: 6px;
+  flex: 1;
+}
+
+/* 自定义滚动条样式 */
+.template-description::-webkit-scrollbar {
+  width: 3px;
+}
+
+.template-description::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 2px;
+}
+
+.template-description::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.template-description::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.template-description h3 {
+  font-size: 0.9rem;
+  color: #1F2937;
+  font-weight: 600;
+  margin: 0.4rem 0 0.25rem 0;
+}
+
+.template-description h4 {
+  font-size: 0.85rem;
+  color: #374151;
+  font-weight: 600;
+  margin: 0.3rem 0 0.15rem 0;
+}
+
+.template-description strong {
+  color: #EA0202;
+  font-weight: 600;
+}
+
+.template-description ul {
+  margin: 0.25rem 0;
+  padding-left: 1rem;
+}
+
+.template-description li {
+  margin-bottom: 0.15rem;
+  color: #4B5563;
+  font-size: 0.8rem;
 }
 
 .selection-actions {
@@ -1004,21 +1005,29 @@ const getTemplateBadgeClass = (name: string) => {
   background: #a8a8a8;
 }
 
+/* 统一聊天区域基础布局与间距，让消息更整齐 */
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  height: 520px;
+  overflow-y: auto;
+}
+
 .message {
   display: flex;
-  gap: 1rem;
+  gap: 12px;
   align-items: flex-start;
   animation: fadeIn 0.3s ease;
 }
 
-.message.user-message {
-  flex-direction: row-reverse;
-}
+.message.user-message { flex-direction: row-reverse; }
 
 .message-avatar {
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -1032,7 +1041,7 @@ const getTemplateBadgeClass = (name: string) => {
 
 .message-content {
   flex: 1;
-  max-width: 70%;
+  max-width: 640px;
 }
 
 .message.user-message .message-content {
@@ -1040,30 +1049,25 @@ const getTemplateBadgeClass = (name: string) => {
 }
 
 .message-text {
-  background: #F3F4F6;
-  padding: 1rem 1.25rem;
-  border-radius: 18px;
+  background: #F6F7F9;
+  padding: 12px 14px;
+  border-radius: 12px;
   font-size: 0.95rem;
   line-height: 1.5;
   color: #374151;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid #E5E7EB;
 }
 
-.message.user-message .message-text {
-  background: #EA0202;
-  color: white;
-}
+.message.user-message .message-text { background: #5b5ce2; color: #fff; border-color: transparent; }
 
 .message-time {
   font-size: 0.8rem;
   color: #9CA3AF;
-  margin-top: 0.5rem;
+  margin-top: 6px;
   text-align: left;
 }
 
-.message.user-message .message-time {
-  text-align: right;
-}
+.message.user-message .message-time { text-align: right; }
 
 .question-example {
   margin-top: 1rem;

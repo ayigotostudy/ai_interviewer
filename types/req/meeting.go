@@ -38,3 +38,8 @@ type AIInterviewReq struct {
 	MeetingID uint   `json:"meeting_id" binding:"required"` // 面试ID
 	Answer    string `json:"answer" binding:"required"`     // 应聘者回答
 }
+
+type GetRemarkReq struct {
+	UserID    uint   `json:"user_id"`                       // 用户ID
+	MeetingID uint   `json:"meeting_id" binding:"required"` // 面试ID
+}

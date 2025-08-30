@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/prompt"
 	"github.com/cloudwego/eino/schema"
 )
@@ -25,6 +24,12 @@ func NewMeetingService(dao *dao.MeetingDAO) *MeetingService {
 	return &MeetingService{dao: dao}
 }
 
+const (
+	PLANED = "planed"
+	INTERVIEWING = "interviewing"
+	COMPLETED = "completed"
+)
+
 func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 	meeting := &model.Meeting{
 		UserID:         request.UserID,
@@ -32,7 +37,7 @@ func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 		Position:       request.Position,
 		JobDescription: request.JobDescription,
 		Time:           request.Time,
-		Status:         request.Status,
+		Status:         PLANED,
 		Remark:         request.Remark,
 	}
 	err := s.dao.Create(meeting)
@@ -159,7 +164,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 
 	// 检查面试轮数
 	if con.GetRoundCount() >= 20 {
-		meeting.Status = "已完成"
+		meeting.Status = COMPLETED
 		if err = s.dao.Update(meeting); err != nil {
 			logs.SugarLogger.Errorf("更新面试轮数失败: %v", err)
 			return "", common.CodeServerBusy
@@ -189,15 +194,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	}
 
 	// 6. 创建对话模型
-	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-		Model:   "gpt-4o",
-		BaseURL: "https://api.vveai.com/v1",
-		APIKey:  "sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81",
-	})
-	if err != nil {
-		logs.SugarLogger.Errorf("模型初始化失败: %v", err)
-		return "", common.CodeServerBusy
-	}
+	chatModel := component.GetAIComponent().GetChatModel("gpt-4o")
 
 	// 7. 创建提示模板
 	template := prompt.FromMessages(schema.FString,
@@ -263,7 +260,9 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 
 	// 如果达到最大轮数，更新面试状态为已完成
 	if con.GetRoundCount() >= 20 {
-		meeting.Status = "已完成"
+		meeting.Status = COMPLETED
+	} else {
+		meeting.Status = INTERVIEWING
 	}
 
 	if err := s.dao.Update(meeting); err != nil {
@@ -297,3 +296,138 @@ func extractKnowledgePoint(input string) string {
 
 	return "" // 未找到匹配
 }
+
+func (s *MeetingService) GetRemark(ctx context.Context, req *req.GetRemarkReq) (string, int64) {
+	meeting, err := s.dao.GetByID(req.MeetingID)
+	if err != nil {
+		logs.SugarLogger.Errorf("获取面试记录失败: %v", err)
+		return "", common.CodeGetMeetingFail
+	}
+
+	if meeting.Status != COMPLETED {
+		return "", common.CodeMeetingNotCompleted
+	}
+
+	if meeting.Remark != "" {
+		return meeting.Remark, common.CodeSuccess
+	}
+
+	model := component.GetAIComponent().GetChatModel("gpt-4o")
+	template := prompt.FromMessages(schema.FString,
+		schema.SystemMessage(
+			"你是一个专业的面试官，需要根据面试记录以及岗位描述，生成胜任力维度得分、答题内容分析和总体得分三大板块json数据。\n"+
+				"重要要求：\n"+
+				"1. 你必须只返回一个纯净的JSON对象，不要有任何额外的前缀、后缀、解释或Markdown代码块标记（如```json）。\n"+
+				"2. JSON必须严格遵循我已提供的格式。\n"+
+				"3. 不要返回任何非JSON文本。",
+		),
+		schema.UserMessage("面试记录和总结：\n{input}"),
+		schema.AssistantMessage(
+			"岗位描述：{job_description}\n返回数据格式：{output}\n",
+			[]schema.ToolCall{},
+		),
+	)
+	prompt := map[string]any{
+		"input":           meeting.InterviewRecord,
+		"job_description": meeting.JobDescription,
+		"output":          output,
+	}
+	messages, err := template.Format(ctx, prompt)
+	if err != nil {
+		logs.SugarLogger.Errorf("生成提示失败: %v", err)
+		return "", common.CodeInterviewGenerateFail
+	}
+
+	resp, err := model.Generate(ctx, messages)
+	if err != nil {
+		logs.SugarLogger.Errorf("生成面试评价失败: %v", err)
+		return "", common.CodeInterviewGenerateFail
+	}
+
+	meeting.Remark = resp.Content
+	if err := s.dao.Update(meeting); err != nil {
+		logs.SugarLogger.Errorf("更新面试记录失败: %v", err)
+		return "", common.CodeServerBusy
+	}
+
+	return resp.Content, common.CodeSuccess
+}
+
+const output = `
+{
+  "overallEvaluation": {
+    "score": 85,
+    "maxScore": 100,
+    "rating": "良好",
+    "chartType": "gauge"
+  },
+  "competencyDimensions": {
+    "chartType": "radar",
+    "dimensions": [
+      {
+        "name": "沟通表达",
+        "score": 82,
+        "fullMark": 100
+      },
+      {
+        "name": "逻辑思维",
+        "score": 88,
+        "fullMark": 100
+      },
+      {
+        "name": "专业知识",
+        "score": 90,
+        "fullMark": 100
+      },
+      {
+        "name": "学习能力",
+        "score": 85,
+        "fullMark": 100
+      },
+      {
+        "name": "抗压性",
+        "score": 80,
+        "fullMark": 100
+      },
+      {
+        "name": "团队合作",
+        "score": 78,
+        "fullMark": 100
+      }
+    ]
+  },
+  "answerAnalysis": {
+    "keywordCloud": {
+      "chartType": "wordcloud",
+      "keywords": [
+        {
+          "text": "Spring Boot",
+          "value": 32
+        },
+        {
+          "text": "微服务",
+          "value": 28
+        },
+        {
+          "text": "MySQL",
+          "value": 25
+        },
+        {
+          "text": "分布式系统",
+          "value": 22
+        },
+        {
+          "text": "问题解决",
+          "value": 19
+        }
+      ]
+    },
+    "jdMatch": {
+      "chartType": "doughnut",
+      "matchPercentage": 76,
+      "matchedKeywords": ["Java", "Spring Boot", "MySQL", "云计算"],
+      "missingKeywords": ["Redis", "消息队列", "容器化"]
+    }
+  }
+}
+`

@@ -33,12 +33,18 @@ const routes = [
   {
     path: '/resume/:id',
     name: 'ResumeDetail',
-    component: () => import('../views/resume/Detail.vue')
+    // 统一跳转到工具页预览/编辑，保留原详情页路由名避免破坏引用
+    redirect: to => ({ path: '/resume/tool', query: { id: to.params.id } })
   },
   {
     path: '/resume/edit/:id',
     name: 'ResumeEdit',
     component: () => import('../views/resume/Edit.vue')
+  },
+  {
+    path: '/resume/tool',
+    name: 'ResumeTool',
+    component: () => import('../views/resume/Tool.vue')
   },
   {
     path: '/interview',
@@ -59,6 +65,11 @@ const routes = [
     path: '/interview/edit/:id',
     name: 'InterviewEdit',
     component: () => import('../views/interview/Edit.vue')
+  },
+  {
+    path: '/interview/evaluation/:id',
+    name: 'InterviewEvaluation',
+    component: () => import('../views/interview/Evaluation.vue')
   }
 ]
 

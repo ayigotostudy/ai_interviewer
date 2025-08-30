@@ -46,10 +46,7 @@
                 <span class="label">面试时间</span>
                 <span class="value">{{ formatTime(interview.time) }}</span>
               </div>
-              <div class="info-item" v-if="interview.remark">
-                <span class="label">备注</span>
-                <span class="value">{{ interview.remark }}</span>
-              </div>
+
             </div>
           </div>
         </div>
@@ -62,14 +59,15 @@
           <div class="chat-header">
             <h3>面试对话</h3>
             <div class="chat-actions">
-              <button class="action-btn" @click="testSpeechAPI" :disabled="isSubmitting">
+              <button class="action-btn" @click="testSpeechAPI" :disabled="isSubmitting || isTestingSpeech">
                 <span class="icon">🎤</span>
-                测试语音
+                {{ isTestingSpeech ? '测试中…' : '测试语音' }}
               </button>
               <button class="action-btn" @click="showAllEvaluations" :disabled="isSubmitting">
                 <span class="icon">📊</span>
                 评价总结
               </button>
+
             </div>
           </div>
           
@@ -95,9 +93,9 @@
                         <div class="wave"></div>
                         <div class="wave"></div>
                       </div>
-                    </div>
-                  </div>
-                  
+        </div>
+      </div>
+
                   <!-- 正常消息内容 -->
                   <div v-else>
                     <div class="message-text">{{ msg.content }}</div>
@@ -111,9 +109,9 @@
                         📊 查看评价
                       </span>
                     </div>
-                  </div>
         </div>
       </div>
+    </div>
 
               
       </div>
@@ -130,6 +128,10 @@
                 @blur="slideDownInput"
               ></textarea>
               <div class="input-actions">
+                <label style="display:flex;align-items:center;gap:6px;margin-right:auto;user-select:none;">
+                  <input type="checkbox" v-model="autoSendAfterASR" />
+                  <span>自动发送</span>
+                </label>
                 <button 
                   @click="toggleRecording" 
                   :class="{ 'recording': isRecording }"
@@ -288,7 +290,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getMeetingDetail, uploadResume } from '@/service/meeting'
 import { getResumeDetail, getResumeList, type ResumeListItem } from '@/service/resume'
-import { recognizeSpeech, testSpeechAPI as testSpeechService } from '@/service/speech'
+import { recognizeSpeech, previewPcmAudio, testSpeechAPI as testSpeechService } from '@/service/speech'
 import { aiInterview } from '@/service/meeting'
 
 const router = useRouter()
@@ -301,7 +303,7 @@ const interview = ref<{
   job_description?: string
   time?: number
   status?: string
-  remark?: string
+
 }>({ candidate: '张三', position: '软件工程师' })
 const resume = ref<{
   name: string
@@ -366,6 +368,8 @@ const recordingTime = ref(0)
 const mediaRecorder = ref<MediaRecorder | null>(null)
 const audioChunks = ref<Blob[]>([])
 const recordingTimer = ref<number | null>(null)
+const isTestingSpeech = ref(false)
+const autoSendAfterASR = ref(false)
 
 // 复制标签内容
 const copyTagContent = (content: string) => {
@@ -609,17 +613,15 @@ const processAudio = async () => {
     const result = await recognizeSpeech(pcmData)
     
     if (result.success) {
-      // 将识别结果填入输入框
-      inputMessage.value = result.text
-      
-      // 显示识别结果消息
-      messages.value.push({
-        id: Date.now(),
-        type: 'system',
-        content: `语音识别结果: ${result.text}`,
-        evaluation: null,
-        isExpanded: false
-      })
+      const text = (result.text || '').trim()
+      if (autoSendAfterASR.value && text) {
+        inputMessage.value = text
+        // 直接发送
+        await sendMessage()
+      } else {
+        // 仅写入输入框
+        inputMessage.value = text
+      }
     } else {
       alert('语音识别失败: ' + result.error)
     }
@@ -633,73 +635,183 @@ const processAudio = async () => {
   }
 }
 
-// 转换为PCM格式
+// 转换为 16kHz 单声道 16-bit PCM（提升兼容性与识别质量）
 const convertToPCM = async (audioBlob: Blob): Promise<ArrayBuffer> => {
+  const arrayBuffer = await blobToArrayBuffer(audioBlob)
+  const ac = new (window.AudioContext || (window as any).webkitAudioContext)()
+  try {
+    const decoded = await ac.decodeAudioData(arrayBuffer)
+    const mono = mixToMono(decoded)
+    const resampled = await resampleToRate(mono, 16000)
+    const pcm = pcmInt16FromAudioBuffer(resampled)
+    // 自动静音裁剪（阈值 -40dB，20ms 窗口，首尾各保留 100ms 作为缓冲）
+    const trimmed = trimInt16PcmSilence(pcm, 16000, {
+      thresholdDb: -40,
+      windowMs: 20,
+      padMs: 100
+    })
+    return trimmed.byteLength > 0 ? trimmed : pcm
+  } finally {
+    ac.close()
+  }
+}
+
+const blobToArrayBuffer = (blob: Blob): Promise<ArrayBuffer> => {
   return new Promise((resolve, reject) => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const fileReader = new FileReader()
-    
-    fileReader.onload = async (event) => {
-      try {
-        const arrayBuffer = event.target?.result as ArrayBuffer
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-        
-        // 转换为PCM
-        const pcmData = convertToPCMData(audioBuffer)
-        resolve(pcmData)
-        
-      } catch (error) {
-        reject(error)
-      } finally {
-        audioContext.close()
-      }
-    }
-    
-    fileReader.onerror = reject
-    fileReader.readAsArrayBuffer(audioBlob)
+    const fr = new FileReader()
+    fr.onload = () => resolve(fr.result as ArrayBuffer)
+    fr.onerror = reject
+    fr.readAsArrayBuffer(blob)
   })
 }
 
-// 将AudioBuffer转换为PCM数据
-const convertToPCMData = (audioBuffer: AudioBuffer): ArrayBuffer => {
-  const length = audioBuffer.length
-  const sampleRate = audioBuffer.sampleRate
-  const channels = audioBuffer.numberOfChannels
-  
-  // 创建PCM数据缓冲区 (16位整数)
-  const pcmBuffer = new ArrayBuffer(length * channels * 2)
-  const pcmView = new Int16Array(pcmBuffer)
-  
-  // 获取音频数据
-  const channelData = []
-  for (let i = 0; i < channels; i++) {
-    channelData.push(audioBuffer.getChannelData(i))
-  }
-  
-  // 转换为16位PCM
-  let pcmIndex = 0
+// 混合到单声道（平均各通道）
+const mixToMono = (buffer: AudioBuffer): AudioBuffer => {
+  const channels = buffer.numberOfChannels
+  if (channels === 1) return buffer
+  const length = buffer.length
+  const sampleRate = buffer.sampleRate
+  const out = new AudioBuffer({ length, numberOfChannels: 1, sampleRate })
+  const outData = out.getChannelData(0)
+  const channelData: Float32Array[] = []
+  for (let c = 0; c < channels; c++) channelData.push(buffer.getChannelData(c))
   for (let i = 0; i < length; i++) {
-    for (let channel = 0; channel < channels; channel++) {
-      const sample = Math.max(-1, Math.min(1, channelData[channel][i]))
-      pcmView[pcmIndex++] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF
-    }
+    let sum = 0
+    for (let c = 0; c < channels; c++) sum += channelData[c][i]
+    outData[i] = sum / channels
   }
-  
-  return pcmBuffer
+  return out
 }
 
-// 测试语音识别API
+// 使用 OfflineAudioContext 高质量重采样到目标采样率
+const resampleToRate = async (buffer: AudioBuffer, targetRate: number): Promise<AudioBuffer> => {
+  if (buffer.sampleRate === targetRate && buffer.numberOfChannels === 1) return buffer
+  const length = Math.ceil(buffer.duration * targetRate)
+  const offline = new OfflineAudioContext(1, length, targetRate)
+  const source = offline.createBufferSource()
+  source.buffer = buffer
+  source.connect(offline.destination)
+  source.start(0)
+  return await offline.startRendering()
+}
+
+// 将单声道 AudioBuffer 转为 Int16 PCM
+const pcmInt16FromAudioBuffer = (buffer: AudioBuffer): ArrayBuffer => {
+  const data = buffer.getChannelData(0)
+  const out = new Int16Array(data.length)
+  for (let i = 0; i < data.length; i++) {
+    const s = Math.max(-1, Math.min(1, data[i]))
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff
+  }
+  return out.buffer
+}
+
+// 基于 RMS 的前后静音裁剪
+const trimInt16PcmSilence = (
+  pcmBuffer: ArrayBuffer,
+  sampleRate: number,
+  options?: { thresholdDb?: number; windowMs?: number; padMs?: number }
+): ArrayBuffer => {
+  const int16 = new Int16Array(pcmBuffer)
+  if (int16.length === 0) return pcmBuffer
+
+  const thresholdDb = options?.thresholdDb ?? -40
+  const windowMs = options?.windowMs ?? 20
+  const padMs = options?.padMs ?? 100
+
+  const threshold = Math.pow(10, thresholdDb / 20) // 线性幅度
+  const windowSize = Math.max(1, Math.floor((sampleRate * windowMs) / 1000))
+  const padSamples = Math.floor((sampleRate * padMs) / 1000)
+
+  // 计算滑动 RMS（简化：使用平方和前缀和提高性能）
+  const norm = 1 / 32768
+  const squares = new Float32Array(int16.length)
+  for (let i = 0; i < int16.length; i++) {
+    const s = int16[i] * norm
+    squares[i] = s * s
+  }
+  const prefix = new Float32Array(int16.length + 1)
+  for (let i = 0; i < int16.length; i++) {
+    prefix[i + 1] = prefix[i] + squares[i]
+  }
+
+  const rmsAt = (center: number): number => {
+    const start = Math.max(0, center - Math.floor(windowSize / 2))
+    const end = Math.min(int16.length, start + windowSize)
+    const sum = prefix[end] - prefix[start]
+    const n = end - start
+    return n > 0 ? Math.sqrt(sum / n) : 0
+  }
+
+  // 找前后第一个超过阈值的帧
+  let startIdx = 0
+  while (startIdx < int16.length && rmsAt(startIdx) < threshold) startIdx += windowSize
+
+  let endIdx = int16.length - 1
+  while (endIdx > startIdx && rmsAt(endIdx) < threshold) endIdx -= windowSize
+
+  // 应用缓冲
+  startIdx = Math.max(0, startIdx - padSamples)
+  endIdx = Math.min(int16.length - 1, endIdx + padSamples)
+
+  if (endIdx <= startIdx) return new Int16Array(0).buffer
+
+  const out = int16.subarray(startIdx, endIdx + 1)
+  return out.slice().buffer
+}
+
+// 测试语音：录制3秒并自动播放本地音频，同时不调用后端
 const testSpeechAPI = async () => {
+  if (isTestingSpeech.value) return
   try {
-    const isConnected = await testSpeechService()
-    if (isConnected) {
-      alert('语音识别API连接正常！')
-  } else {
-      alert('语音识别API连接失败，请检查后端服务')
+    isTestingSpeech.value = true
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    // 选择最优可用的编码
+    const preferredTypes = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4;codecs=mp4a.40.2',
+      'audio/mp4'
+    ]
+    const mimeType = preferredTypes.find((t) => (window as any).MediaRecorder?.isTypeSupported?.(t)) || ''
+    const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
+    const chunks: Blob[] = []
+
+    mr.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data)
     }
+
+    mr.onstop = async () => {
+      try {
+        const type = mimeType || 'audio/webm'
+        const blob = new Blob(chunks, { type })
+        const url = URL.createObjectURL(blob)
+        const audio = new Audio(url)
+        audio.autoplay = true
+        audio.controls = true
+        audio.play().catch((e) => {
+          console.warn('自动播放被阻止，附加到页面，请点击播放', e)
+          try {
+            document.body.appendChild(audio)
+          } catch {}
+        })
+      } catch (err) {
+        console.error('测试语音处理失败:', err)
+      } finally {
+        stream.getTracks().forEach(t => t.stop())
+        isTestingSpeech.value = false
+      }
+    }
+
+    mr.start()
+    // 3 秒后自动停止
+    setTimeout(() => {
+      if (mr.state !== 'inactive') mr.stop()
+    }, 3000)
   } catch (error) {
-    console.error('测试语音API失败:', error)
-    alert('测试语音API失败: ' + error)
+    console.error('无法访问麦克风:', error)
+    alert('无法访问麦克风，请检查权限设置')
+    isTestingSpeech.value = false
   }
 }
 
@@ -815,7 +927,7 @@ const loadInterviewData = async () => {
           job_description: interviewData.job_description,
           time: interviewData.time,
           status: interviewData.status,
-          remark: interviewData.remark
+
         }
         
         // 直接使用面试数据中的resume字段
@@ -1042,6 +1154,8 @@ const showAllEvaluations = () => {
     alert('暂无评价数据，请先进行面试对话。')
   }
 }
+
+
 
 // 渲染Markdown
 const renderMarkdown = (markdown: string): string => {

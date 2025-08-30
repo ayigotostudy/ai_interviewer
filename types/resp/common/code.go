@@ -46,6 +46,9 @@ const (
 	CodeInterviewRoundLimit
 	CodeDeleteMeetingFail
 	CodeInterviewGenerateFail
+	CodeGetMeetingFail
+	CodeGetRemarkFail
+	CodeMeetingNotCompleted
 )
 
 const (
@@ -65,13 +68,14 @@ const (
 	// 简历
 	CodeUploadResumeFail int64 = 2601 + iota
 	CodeCreateResumeFail
-	CodeGenerateResumeFail // 生成简历失败
-	CodeGetTemplateFail     // 获取模板失败
-	CodeGenerateMessageFail // 生成消息失败
+	CodeGenerateResumeFail    // 生成简历失败
+	CodeGetTemplateFail       // 获取模板失败
+	CodeGenerateMessageFail   // 生成消息失败
 	CodeGetResumeTemplateFail // 获取简历模板失败
-	CodeGetResumeFail        // 获取简历失败
-	CodeGetResumeListFail    // 获取简历列表失败
-	CodeDeleteResumeFail     // 删除简历失败
+	CodeGetResumeFail         // 获取简历失败
+	CodeGetResumeListFail     // 获取简历列表失败
+	CodeDeleteResumeFail      // 删除简历失败
+	CodeUpdateResumeFail      // 更新简历失败
 )
 
 const (
@@ -126,21 +130,24 @@ var Msg = map[int64]string{
 	CodeUpdateUserFail: "修改用户失败",
 
 	// 面试
-	CodeCreateMeetingFail:   "创建面试失败",
-	CodeUpdateMeetingFail:   "更新面试失败",
-	CodeMeetingNotExist:     "面试记录不存在",
-	CodeResumeNotExist:      "简历不存在",
-	CodeInterviewEnded:      "面试已结束",
-	CodeInterviewRoundLimit: "面试已达到最大轮数限制",
-	CodeDeleteMeetingFail:   "删除面试失败",
-	CodeInterviewGenerateFail:       "面试生成回答失败",
+	CodeCreateMeetingFail:     "创建面试失败",
+	CodeUpdateMeetingFail:     "更新面试失败",
+	CodeMeetingNotExist:       "面试记录不存在",
+	CodeResumeNotExist:        "简历不存在",
+	CodeInterviewEnded:        "面试已结束",
+	CodeInterviewRoundLimit:   "面试已达到最大轮数限制",
+	CodeDeleteMeetingFail:     "删除面试失败",
+	CodeInterviewGenerateFail: "面试生成回答失败",
+	CodeGetRemarkFail:         "获取面试备注失败",
+	CodeMeetingNotCompleted:   "面试未完成",
+	CodeGetMeetingFail:        "获取面试记录失败",
 
 	// 简历
-	CodeUploadResumeFail: "上传简历失败",
-	CodeCreateResumeFail:    "创建简历失败",
-	CodeGenerateResumeFail:  "生成简历内容失败",
-	CodeGetTemplateFail:     "获取模板失败",
-	CodeGenerateMessageFail:  "生成消息失败",
+	CodeUploadResumeFail:      "上传简历失败",
+	CodeCreateResumeFail:      "创建简历失败",
+	CodeGenerateResumeFail:    "生成简历内容失败",
+	CodeGetTemplateFail:       "获取模板失败",
+	CodeGenerateMessageFail:   "生成消息失败",
 	CodeGetResumeTemplateFail: "获取简历模板失败",
 	CodeGetResumeFail:         "获取简历失败",
 	CodeGetResumeListFail:     "获取简历列表失败",

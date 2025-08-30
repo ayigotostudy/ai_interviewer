@@ -73,3 +73,13 @@ func (mc *ResumeController) DeleteResume(c *gin.Context) {
 	code := mc.svc.DeleteResume(context.Background(), ctrl.Request.ID)
 	ctrl.WithDataJSON(code, nil)
 }
+
+func (mc *ResumeController) UpdateResume(c *gin.Context) {
+	ctrl := controller.NewCtrl[req.UpdateResumeRequest](c)
+	if err := c.Bind(ctrl.Request); err != nil {
+		ctrl.NoDataJSON(common.CodeInvalidParams)
+		return
+	}
+	code := mc.svc.UpdateResume(context.Background(), ctrl.Request)
+	ctrl.WithDataJSON(code, nil)
+}

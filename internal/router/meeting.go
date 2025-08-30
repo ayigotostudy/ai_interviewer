@@ -24,4 +24,5 @@ func meeting(rg *gin.RouterGroup) {
 
 	rg.POST("/upload_resume", meetingCtrl.UploadResume)
 	rg.POST("/ai_interview", meetingCtrl.AIInterview)
+	rg.GET("/remark", meetingCtrl.GetRemark)
 }

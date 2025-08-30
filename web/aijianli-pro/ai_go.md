@@ -652,6 +652,32 @@ GET /meeting/list
 |»» interview_record|string|false|none||none|
 |»» interview_summary|string|false|none||none|
 
+## GET 获取面试评价
+
+GET /meeting/remark
+
+### 请求参数
+
+|名称|位置|类型|必选|说明|
+|---|---|---|---|---|
+|id|query|string| 否 |none|
+
+> 返回示例
+
+> 200 Response
+
+```json
+{}
+```
+
+### 返回结果
+
+|状态码|状态码含义|说明|数据模型|
+|---|---|---|---|
+|200|[OK](https://tools.ietf.org/html/rfc7231#section-6.3.1)|none|Inline|
+
+### 返回数据结构
+
 # 公用模块
 
 ## POST 语音识别

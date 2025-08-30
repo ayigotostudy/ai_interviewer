@@ -41,7 +41,7 @@ func initModel() {
 	db.AutoMigrate(model.Resume{})
 	db.AutoMigrate(model.Template{})
 	// 初始化模板
-	initTemplate()
+	// initTemplate()
 }
 
 func initTemplate() {

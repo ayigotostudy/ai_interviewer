@@ -15,6 +15,74 @@ export interface SpeechRecognitionResponse {
   error?: string
 }
 
+// ===== 音频工具函数：PCM16 -> WAV =====
+function writeString(view: DataView, offset: number, str: string) {
+  for (let i = 0; i < str.length; i++) {
+    view.setUint8(offset + i, str.charCodeAt(i))
+  }
+}
+
+function encodeWavFromPcmInt16(
+  pcmBuffer: ArrayBuffer,
+  wavSampleRate: number,
+  wavChannels: number
+): ArrayBuffer {
+  const bytesPerSample = 2 // 16-bit
+  const pcmData = new Int16Array(pcmBuffer)
+  const blockAlign = wavChannels * bytesPerSample
+  const byteRate = wavSampleRate * blockAlign
+
+  const wavHeaderSize = 44
+  const wavBuffer = new ArrayBuffer(wavHeaderSize + pcmData.byteLength)
+  const view = new DataView(wavBuffer)
+
+  // "RIFF"
+  writeString(view, 0, 'RIFF')
+  // file length - 8
+  view.setUint32(4, wavHeaderSize + pcmData.byteLength - 8, true)
+  // "WAVE"
+  writeString(view, 8, 'WAVE')
+  // "fmt " chunk
+  writeString(view, 12, 'fmt ')
+  view.setUint32(16, 16, true) // Subchunk1Size for PCM
+  view.setUint16(20, 1, true) // AudioFormat PCM = 1
+  view.setUint16(22, wavChannels, true)
+  view.setUint32(24, wavSampleRate, true)
+  view.setUint32(28, byteRate, true)
+  view.setUint16(32, blockAlign, true)
+  view.setUint16(34, 16, true) // BitsPerSample
+  // "data" chunk
+  writeString(view, 36, 'data')
+  view.setUint32(40, pcmData.byteLength, true)
+
+  // PCM samples
+  const out = new Int16Array(wavBuffer, wavHeaderSize)
+  out.set(pcmData)
+  return wavBuffer
+}
+
+/**
+ * 将 PCM16 缓冲区（可超长）裁剪到 limitSeconds，并创建可播放的 WAV Blob URL，立即播放
+ */
+export function previewPcmAudio(
+  audioData: ArrayBuffer,
+  sampleRate: number = 16000,
+  channels: number = 1,
+  limitSeconds: number = 60
+): { audio: HTMLAudioElement; url: string; blob: Blob } {
+  const bytesPerSample = 2
+  const maxSamples = Math.max(1, Math.floor(sampleRate * channels * limitSeconds))
+  const maxBytes = maxSamples * bytesPerSample
+  const limitedPcmBuffer = audioData.byteLength > maxBytes ? audioData.slice(0, maxBytes) : audioData
+
+  const wavArrayBuffer = encodeWavFromPcmInt16(limitedPcmBuffer, sampleRate, channels)
+  const blob = new Blob([wavArrayBuffer], { type: 'audio/wav' })
+  const url = URL.createObjectURL(blob)
+  const audio = new Audio(url)
+  audio.play().catch(() => {})
+  return { audio, url, blob }
+}
+
 /**
  * 语音识别接口
  * @param audioData PCM格式的音频数据
@@ -23,64 +91,54 @@ export interface SpeechRecognitionResponse {
  * @returns 识别结果
  */
 export function recognizeSpeech(
-  audioData: ArrayBuffer, 
-  sampleRate: number = 16000, 
+  audioData: ArrayBuffer,
+  sampleRate: number = 16000,
   channels: number = 1
 ): Promise<SpeechRecognitionResponse> {
   return new Promise((resolve) => {
     try {
-      // 将ArrayBuffer转换为Base64字符串
-      const uint8Array = new Uint8Array(audioData)
-      let binary = ''
-      for (let i = 0; i < uint8Array.length; i++) {
-        binary += String.fromCharCode(uint8Array[i])
-      }
-      const base64Audio = btoa(binary)
-      
-      // 构建请求参数
-      const params: SpeechRecognitionParams = {
-        audio_data: audioData,
-        audio_format: 'pcm',
-        sample_rate: sampleRate,
-        channels: channels
-      }
-      
-      // 调用后端语音识别接口
-      request.post('/api/v1/speech/recognize', {
-        audio_data: base64Audio,
-        audio_format: 'pcm',
-        sample_rate: sampleRate,
-        channels: channels
-      })
-      .then(response => {
-        console.log('语音识别响应:', response)
-        
-        if (response.data.code === 1000) {
-          resolve({
-            success: true,
-            text: response.data.data?.text || '识别结果为空'
-          })
-        } else {
+      // 限制音频时长为 60 秒（按 16-bit PCM 计算）
+      const bytesPerSample = 2
+      const maxSamples = sampleRate * channels * 60
+      const maxBytes = maxSamples * bytesPerSample
+      const limitedPcmBuffer =
+        audioData.byteLength > maxBytes ? audioData.slice(0, maxBytes) : audioData
+
+      // 将 PCM 打包为 WAV
+      const wavArrayBuffer = encodeWavFromPcmInt16(limitedPcmBuffer, sampleRate, channels)
+
+      const form = new FormData()
+      const wavBlob = new Blob([wavArrayBuffer], { type: 'audio/wav' })
+      form.append('audio', wavBlob, 'audio.wav')
+
+      request
+        .post('/speech/recognize', form, {
+          // 让浏览器自动设置 multipart boundary，不手动设置 Content-Type
+          timeout: 60000,
+          // @ts-ignore
+          maxBodyLength: Infinity,
+          // @ts-ignore
+          maxContentLength: Infinity,
+        })
+        .then((response) => {
+          console.log('语音识别响应:', response)
+          const text: string | undefined = response?.data?.text
+          if (text && typeof text === 'string') {
+            resolve({ success: true, text })
+          } else {
+            resolve({ success: false, error: '语音识别失败' })
+          }
+        })
+        .catch((error) => {
+          console.error('语音识别请求失败:', error)
           resolve({
             success: false,
-            error: response.data.msg || '语音识别失败'
+            error: error?.response?.data?.error || error?.message || '网络请求失败',
           })
-        }
-      })
-      .catch(error => {
-        console.error('语音识别请求失败:', error)
-        resolve({
-          success: false,
-          error: error.response?.data?.msg || '网络请求失败'
         })
-      })
-      
-    } catch (error) {
+    } catch (error: any) {
       console.error('处理音频数据失败:', error)
-      resolve({
-        success: false,
-        error: '音频数据处理失败'
-      })
+      resolve({ success: false, error: '音频数据处理失败' })
     }
   })
 }
@@ -91,7 +149,7 @@ export function recognizeSpeech(
  */
 export function testSpeechAPI(): Promise<boolean> {
   return new Promise((resolve) => {
-    request.get('/api/v1/speech/health')
+    request.get('/speech/health')
       .then(() => resolve(true))
       .catch(() => resolve(false))
   })

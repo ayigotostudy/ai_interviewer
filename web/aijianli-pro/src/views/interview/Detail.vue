@@ -16,6 +16,10 @@
             <span class="icon">✏️</span>
             编辑
           </button>
+          <button class="evaluation-btn" @click="viewEvaluation" v-if="interview.status === 'completed'">
+            <span class="icon">📊</span>
+            查看评价
+          </button>
           <button class="cancel-btn" @click="cancelInterview" v-if="interview.status === 'planned'">
             <span class="icon">❌</span>
             取消面试
@@ -66,10 +70,7 @@
             <p>{{ interview.job_description }}</p>
           </div>
 
-          <div class="requirements-section" v-if="interview.remark">
-            <h4>备注</h4>
-            <p>{{ interview.remark }}</p>
-          </div>
+
         </div>
 
         <div class="resume-card" v-if="interview.resume_id">
@@ -310,6 +311,10 @@ const editInterview = () => {
   router.push(`/interview/edit/${route.params.id}`)
 }
 
+const viewEvaluation = () => {
+  router.push(`/interview/evaluation/${route.params.id}`)
+}
+
 const cancelInterview = async () => {
   if (!confirm('确定要取消这场面试吗？此操作不可恢复。')) {
     return
@@ -466,7 +471,7 @@ onMounted(() => {
   gap: 1rem;
 }
 
-.start-btn, .edit-btn, .cancel-btn {
+.start-btn, .edit-btn, .evaluation-btn, .cancel-btn {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 10px;
@@ -495,6 +500,15 @@ onMounted(() => {
 
 .edit-btn:hover {
   background: #FDE68A;
+}
+
+.evaluation-btn {
+  background: #E0E7FF;
+  color: #3730A3;
+}
+
+.evaluation-btn:hover {
+  background: #C7D2FE;
 }
 
 .cancel-btn {

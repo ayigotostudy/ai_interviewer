@@ -27,7 +27,6 @@ export interface CreateMeetingParams {
   job_description: string;
   time: number;
   status: string;
-  remark: string;
 }
 
 export interface UpdateMeetingParams {
@@ -83,4 +82,13 @@ export function uploadResume(data: UploadResumeParams) {
 
 export function aiInterview(data: AiInterviewParams) {
   return request.post('/meeting/ai_interview', data)
+}
+
+/**
+ * 获取面试评价
+ * @param meetingId 面试ID
+ * @returns 面试评价数据
+ */
+export function getMeetingEvaluation(meetingId: string | number) {
+  return request.get(`/meeting/remark?id=${meetingId}`)
 }

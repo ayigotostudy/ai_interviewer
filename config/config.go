@@ -60,7 +60,16 @@ func Init() {
 		panic(err)
 	}
 
+	viper.SetConfigName("ai_config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(workdir + "/config")
+
+	if err = viper.Unmarshal(&aiConfig); err != nil {
+		panic(err)
+	}
+
 	logs.SugarLogger.Infof("config: %v", config)
+	InitAIConfig()
 }
 
 func GetMySQLConfig() MySQL {

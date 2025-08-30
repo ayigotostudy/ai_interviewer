@@ -18,7 +18,7 @@
 
     <div class="edit-content">
       <div class="edit-form">
-        <div class="form-section">
+        <div class="form-section" v-if="false">
           <h3>基本信息</h3>
           <div class="form-row">
             <div class="form-group">
@@ -52,7 +52,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section" v-if="false">
           <h3>自我评价</h3>
           <div class="form-group">
             <textarea 
@@ -64,7 +64,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section" v-if="false">
           <h3>工作经历</h3>
           <div class="form-group">
             <textarea 
@@ -79,7 +79,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section" v-if="false">
           <h3>项目经历</h3>
           <div class="form-group">
             <textarea 
@@ -95,6 +95,19 @@
         </div>
 
         <div class="form-section">
+          <h3>内容（Markdown）</h3>
+          <div class="form-group">
+            <textarea 
+              v-model="resumeData.content"
+              placeholder="# 标题、## 分区、- 列表 等支持实时预览"
+              class="form-textarea"
+              rows="20"
+            ></textarea>
+            <div class="form-help">右侧实时预览，支持 Markdown 粗体、标题、列表等</div>
+          </div>
+        </div>
+
+        <div class="form-section" v-if="false">
           <h3>专业技能</h3>
           <div class="form-group">
             <textarea 
@@ -106,7 +119,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section" v-if="false">
           <h3>目标职位</h3>
           <div class="form-group">
             <input 
@@ -118,7 +131,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section" v-if="false">
           <h3>获奖情况</h3>
           <div class="form-group">
             <textarea 
@@ -130,7 +143,7 @@
           </div>
         </div>
 
-        <div class="form-section">
+        <div class="form-section" v-if="false">
           <h3>简历状态</h3>
           <div class="form-group">
             <select v-model="resumeData.status" class="form-select">
@@ -151,46 +164,7 @@
         </div>
 
         <div class="preview-content">
-          <div class="preview-section">
-            <h2>{{ resumeData.name || '未命名简历' }}</h2>
-            <p class="basic-info">{{ resumeData.basic_info || '基本信息未填写' }}</p>
-          </div>
-
-          <div class="preview-section" v-if="resumeData.self_eval">
-            <h3>自我评价</h3>
-            <p>{{ resumeData.self_eval }}</p>
-          </div>
-
-          <div class="preview-section" v-if="workExperience.length > 0">
-            <h3>工作经历</h3>
-            <div v-for="(exp, index) in workExperience" :key="index" class="experience-item">
-              <p class="experience-title">{{ exp.title }}</p>
-              <p class="experience-desc">{{ exp.description }}</p>
-            </div>
-          </div>
-
-          <div class="preview-section" v-if="projectExperience.length > 0">
-            <h3>项目经历</h3>
-            <div v-for="(project, index) in projectExperience" :key="index" class="experience-item">
-              <p class="experience-title">{{ project.title }}</p>
-              <p class="experience-desc">{{ project.description }}</p>
-            </div>
-          </div>
-
-          <div class="preview-section" v-if="resumeData.skills">
-            <h3>专业技能</h3>
-            <p>{{ resumeData.skills }}</p>
-          </div>
-
-          <div class="preview-section" v-if="resumeData.target_job">
-            <h3>目标职位</h3>
-            <p>{{ resumeData.target_job }}</p>
-          </div>
-
-          <div class="preview-section" v-if="resumeData.awards">
-            <h3>获奖情况</h3>
-            <p>{{ resumeData.awards }}</p>
-          </div>
+          <ResumeShow :content="resumeData.content" />
         </div>
       </div>
     </div>
@@ -200,7 +174,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { createResume } from '@/service/resume'
+import { createResume, getResumeDetail } from '@/service/resume'
+import ResumeShow from '@/components/ResumeShow.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -215,6 +190,7 @@ const resumeData = ref({
   skills: '',
   target_job: '',
   awards: '',
+  content: '',
   template_id: 1,
   status: 'draft'
 })
@@ -295,32 +271,39 @@ const saveResume = async () => {
 
 const loadResumeData = async () => {
   try {
-    // 这里应该调用API获取简历详情
-    // const response = await getResumeDetail(route.params.id)
-    // resumeData.value = response.data
-    
-    // 使用模拟数据
-    resumeData.value = {
-      name: '软件工程师简历',
-      basic_info: '姓名：张三 | 年龄：28岁 | 学历：本科 | 联系方式：13800138000 | 邮箱：zhangsan@example.com',
-      work_exp: '腾讯科技-高级软件工程师-2020-2022-负责微信支付系统的开发和维护\n阿里巴巴-软件工程师-2018-2020-参与电商平台的开发',
-      project_exp: '微信支付系统-微服务架构-2020-2022-负责支付核心模块的设计和实现\n电商平台-React+Node.js-2018-2020-参与用户端和商家端的开发',
-      self_eval: '5年Java开发经验，熟悉微服务架构，有大型项目经验，具备良好的团队协作能力和问题解决能力。',
-      skills: 'Java, Spring Boot, MySQL, Redis, Docker, Kubernetes, 微服务架构',
-      target_job: '高级软件工程师',
-      awards: '优秀员工奖',
-      template_id: 1,
-      status: 'completed'
+    const id = route.params.id as string | undefined
+    if (!id) {
+      return
+    }
+    const response = await getResumeDetail(id)
+    // 期望后端返回格式：{ code, data }
+    const data = response?.data?.data || response?.data
+    if (data) {
+      resumeData.value = {
+        name: data.name || '',
+        basic_info: data.basic_info || '',
+        work_exp: data.work_exp || '',
+        project_exp: data.project_exp || '',
+        self_eval: data.self_eval || '',
+        skills: data.skills || '',
+        target_job: data.target_job || '',
+        awards: data.awards || '',
+        content: data.content || '',
+        template_id: data.template_id || 1,
+        status: data.status || 'draft'
+      }
     }
   } catch (error) {
     console.error('获取简历详情失败:', error)
-    alert('获取简历详情失败，请重试')
   }
 }
 
 onMounted(() => {
   loadResumeData()
 })
+
+// —— 将左侧表单与右侧 Markdown 内容联动 ——
+// 只显示并编辑接口返回的 content，不再自动拼接覆盖
 </script>
 
 <style scoped>

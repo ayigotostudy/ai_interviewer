@@ -46,7 +46,7 @@ export interface ResumeTemplate {
   UpdatedAt: string
   DeletedAt: null | string
   name: string
-  content: string
+  show_content: string
 }
 
 // 创建简历

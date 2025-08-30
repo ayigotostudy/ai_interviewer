@@ -49,8 +49,8 @@ func (dao *ResumeDAO) GetResumesByUserID(userID uint) ([]*model.Resume, error) {
 }
 
 // UpdateResume 更新简历信息
-func (dao *ResumeDAO) UpdateResume(resume *model.Resume) error {
-	return dao.db.Save(resume).Error
+func (dao *ResumeDAO) UpdateResume(id int64, content string) error {
+	return dao.db.Model(&model.Resume{}).Where("id = ?", id).Update("content", content).Error
 }
 
 // DeleteResume 删除简历

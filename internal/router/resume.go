@@ -17,4 +17,5 @@ func resume(r *gin.RouterGroup) {
 	r.GET("", resumeCtrl.GetResume)
 	r.GET("/template", resumeCtrl.GetResumeTemplate)
 	r.DELETE("", resumeCtrl.DeleteResume)
+	r.PUT("", resumeCtrl.UpdateResume)
 }

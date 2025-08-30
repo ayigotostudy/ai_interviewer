@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>在线简历制作工具 - Demo</title>
+    <style>
+      :root{
+        --bg:#f5f6f8;--panel:#fff;--text:#0f172a;--muted:#6b7280;--border:#e5e7eb;--accent:#111;--tag:#f1f5f9;--tag-border:#e2e8f0;
+      }
+      *{box-sizing:border-box}
+      html,body{height:100%}
+      body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,PingFang SC,Microsoft YaHei,sans-serif}
+      .toolbar{position:sticky;top:0;z-index:10;background:var(--panel);border-bottom:1px solid var(--border);padding:.5rem 1rem;display:flex;gap:.5rem;align-items:center}
+      .toolbar button,.toolbar .btn{background:#fff;border:1px solid var(--border);padding:.45rem .8rem;border-radius:.5rem;cursor:pointer}
+      .toolbar .btn-primary{background:#111;color:#fff;border-color:#111}
+      .toolbar .spacer{flex:1}
+
+      .app{display:grid;grid-template-columns:1fr 1fr;gap:1rem;padding:1rem;height:calc(100% - 56px)}
+      .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+      .panel header{padding:.75rem 1rem;border-bottom:1px solid var(--border);font-weight:600}
+      .panel .body{flex:1;min-height:0;display:flex}
+      .editor{width:100%;height:100%;border:none;outline:none;padding:1rem;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+      .preview{flex:1;overflow:auto}
+      .resume-page{max-width:900px;margin:0 auto;padding:60px;background:#fff;color:#111}
+      .resume-page h1{font-size:28px;margin:0 0 28px 0;text-align:center}
+      .resume-page h2{font-size:18px;margin:36px 0 14px 0;padding-bottom:10px;border-bottom:2px solid #000;display:flex;align-items:center;gap:8px}
+      .resume-page h2::before{content:"";width:8px;height:8px;border-radius:50%;background:#000;display:inline-block}
+      .resume-page .contact{margin:0 auto 24px auto;text-align:center;padding:10px 14px;background:#fafafa;border-radius:8px;color:#374151}
+      .resume-page p{margin:0 0 10px 0}
+      .resume-page ul{margin:10px 0 12px 18px}
+      .resume-page li{margin:6px 0}
+      .tag{display:inline-block;padding:2px 8px;margin:0 6px 6px 0;background:var(--tag);border:1px solid var(--tag-border);border-radius:999px;font-size:12px}
+      .xp{border-left:3px solid #111;background:#fafafa;border-radius:8px;padding:16px 16px 12px 16px;margin:12px 0}
+      .xp-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px}
+      .xp .company{font-weight:600}
+      .statusbar{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--border);padding:.4rem .8rem;color:var(--muted);display:flex;gap:1rem}
+
+      @media (max-width: 1024px){
+        .app{grid-template-columns:1fr}
+      }
+    </style>
+    <!-- Marked.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  </head>
+  <body>
+    <div class="toolbar">
+      <label class="btn">
+        导入简历
+        <input id="fileInput" type="file" accept=".md,.txt" style="display:none" />
+      </label>
+      <button id="tplBtn">简历模板</button>
+      <button id="helpBtn">使用教程</button>
+      <button id="photoBtn">证件照制作</button>
+      <button id="aiBtn">AI笔试面试</button>
+      <button id="wmBtn">移除水印</button>
+      <span class="spacer"></span>
+      <span id="exportCount">累计导出 0 次</span>
+      <button id="saveBtn">保存</button>
+      <button id="exportPdfBtn" class="btn-primary">导出 PDF</button>
+      <button id="exportImgBtn" class="btn">导出图片</button>
+      <button id="modeBtn">切换编辑模式</button>
+    </div>
+
+    <div class="app">
+      <div class="panel">
+        <header>Markdown 编辑器</header>
+        <div class="body">
+          <textarea id="editor" class="editor" placeholder="# 开始书写你的简历..."># Go高级开发工程师 - 高并发架构专家
+(+86)155-0799-7194 ｜ codecv@163.com ｜ 微信号：codecvresume
+
+## 教育背景
+::: start
+**2015.09 - 2019.07**
+:::
+icon:fudan **复旦大学** `985` `211` `双一流`
+:::
+**计算机科学与技术专业 - 学士**
+::: end
+
+## 工作经历
+::: start
+**2021.04 - 至今**
+:::
+**字节跳动**
+:::
+**基础架构部**
+:::
+**Go高级开发工程师**
+::: end
+- **背景：** 公司业务快速增长，核心服务面临**百万QPS**挑战，需要高性能 可扩展的后端架构
+- **职责：** 负责高性能RPC框架开发与优化，设计分布式服务治理系统，解决大规模服务发现与负载均衡问题
+- **成果：** 优化RPC框架性能提升40%，延迟降低35%；设计服务网格解决方案，支撑日均千亿级调用
+
+::: start
+**2019.08 - 2021.03**
+:::
+**蚂蚁集团**
+:::
+**中间件团队**
+:::
+**Go开发工程师**
+::: end
+- **背景：** 支付宝核心交易系统需要高性能、高可靠的中间件支持，保障金融级稳定性
+- **职责：** 参与分布式消息队列和配置中心开发，负责系统性能优化和容灾设计
+- **成果：** 重构消息队列核心模块，吞吐量提升3倍；设计多活容灾方案，实现跨区域秒级切换；优化GC策略，降低99.9%延迟40%
+
+## 项目经验
+::: start
+**2022.06 - 2022.12**
+:::
+**分布式服务网格系统**
+:::
+**技术负责人**
+::: end
+- **背景：** 公司微服务数量激增，跨语言服务治理困难，运维成本高
+- **职责：** 设计并实现基于Golang的轻量级服务网格系统，提供统一的服务发现 负载均衡和流量治理能力
+- **技术栈：** `Go` `gRPC` `etcd` `eBPF` `Prometheus` `K8s`
+- **难点：** 保证数据面高性能，同时提供丰富的流量治理能力和可观测性
+- **成果：** 系统在10万+容器规模部署，**支持百万QPS吞吐**，平均延迟增加<0.5ms；服务故障平均恢复时间从小时级降至分钟级；被公司作为标准服务治理平台推广
+
+## 技术专长
+::: start
+**Go语言开发**
+:::
+**分布式系统**
+:::
+**性能优化**
+::: end
+- 精通Go语言核心原理和最佳实践，包括内存模型、GC机制、goroutine调度和并发控制
+- 深入理解分布式系统理论与实践，包括一致性算法、分布式事务、高可用设计和容错机制
+          </textarea>
+        </div>
+      </div>
+
+      <div class="panel">
+        <header>实时预览</header>
+        <div class="body preview">
+          <div id="resume" class="resume-page"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <span id="pos">行 1, 列 1</span>
+      <span id="stat">已加载模板（本地可编辑）</span>
+    </div>
+
+    <script>
+      // —— 简洁的 Resume 渲染器（与项目内 ResumeShow 逻辑一致思路）——
+      function renderResume(md){
+        if(!md) return ''
+        let c = md
+
+        // 标题
+        c = c.replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        c = c.replace(/^## (.*$)/gm, '<h2>$1</h2>')
+
+        // 联系方式（含 | 或 ｜）
+        c = c.replace(/^([^#\n]*[\|｜][^#\n]*)$/gm, '<div class="contact">$1</div>')
+
+        // ::: start ... ::: end 区块 -> 经验卡片
+        c = c.replace(/::: start[\t ]*\n([\s\S]*?)\n[\t ]*::: end/g, (m,inner)=>{
+          const lines = inner.trim().split(/\n+/).filter(Boolean)
+          if(lines.length>=3){
+            const first = lines[0].replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+            const second= lines[1].replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+            const third = lines[2].replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+            const rest  = lines.slice(3).join(' ')
+            return `
+              <div class="xp">
+                <div class="xp-head">
+                  <div class="company">${second}</div>
+                  <div class="duration">${first}</div>
+                </div>
+                <div class="position">${third}</div>
+                ${rest?`<p>${rest}</p>`:''}
+              </div>
+            `
+          }
+          return m
+        })
+
+        // 行内反引号为技术标签
+        c = c.replace(/`([^`]+?)`/g,'<span class="tag">$1</span>')
+        // 列表
+        c = c.replace(/^- (.*)$/gm,'<li>$1</li>')
+        c = c.replace(/(?:<li>[\s\S]*?<\/li>)(?:(?:\n)?<li>[\s\S]*?<\/li>)+/g,(m)=>`<ul>${m}</ul>`)
+        // 粗体
+        c = c.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+        // 普通段落
+        c = c.replace(/^([^#\n<][^\n]*)$/gm,(m)=>{
+          if(m.trim() && !m.includes(':::') && !m.startsWith('<') && !/^<li>/.test(m)){
+            return `<p>${m}</p>`
+          }
+          return m
+        })
+        return c
+      }
+
+      const editor = document.getElementById('editor')
+      const resume = document.getElementById('resume')
+      const pos = document.getElementById('pos')
+      const exportCountEl = document.getElementById('exportCount')
+
+      function update(){
+        resume.innerHTML = renderResume(editor.value)
+        localStorage.setItem('resume_md', editor.value)
+      }
+      editor.addEventListener('input', update)
+      editor.addEventListener('keyup', ()=>{
+        const start = editor.selectionStart
+        const txt = editor.value.slice(0,start)
+        const line = txt.split(/\n/).length
+        const col = start - (txt.lastIndexOf('\n')+1)
+        pos.textContent = `行 ${line}, 列 ${col}`
+      })
+
+      // 初始化：本地存储优先
+      const saved = localStorage.getItem('resume_md')
+      if(saved){ editor.value = saved }
+      update()
+
+      // —— 工具栏 ——
+      document.getElementById('fileInput').addEventListener('change', async (e)=>{
+        const f = e.target.files[0]
+        if(!f) return
+        const txt = await f.text()
+        editor.value = txt
+        update()
+      })
+
+      document.getElementById('tplBtn').addEventListener('click', ()=>{
+        const tpl = `# Go高级开发工程师 - 高并发架构专家\n(+86)155-0799-7194 ｜ codecv@163.com ｜ 微信号：codecvresume\n\n## 教育背景\n::: start\n**2015.09 - 2019.07**\n:::\nicon:fudan **复旦大学** \`985\` \`211\` \`双一流\`\n:::\n**计算机科学与技术专业 - 学士**\n::: end\n\n## 工作经历\n::: start\n**2021.04 - 至今**\n:::\n**字节跳动**\n:::\n**基础架构部**\n:::\n**Go高级开发工程师**\n::: end\n- 负责高性能RPC框架开发与优化\n- 设计服务网格方案，支撑千亿级调用\n`
+        editor.value = tpl
+        update()
+      })
+
+      document.getElementById('helpBtn').addEventListener('click', ()=>{
+        alert('使用说明：\n1) 左侧输入 Markdown，右侧实时预览。\n2) 顶部可导入/模板/保存/导出。\n3) 反引号 `内容` 会渲染为标签，::: start ... ::: end 构造成经历区块。')
+      })
+
+      document.getElementById('saveBtn').addEventListener('click', ()=>{
+        const blob = new Blob([editor.value], {type:'text/markdown'})
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = 'resume.md'
+        a.click()
+      })
+
+      function bumpExport(){
+        const n = Number(localStorage.getItem('export_count')||'0')+1
+        localStorage.setItem('export_count', String(n))
+        exportCountEl.textContent = `累计导出 ${n} 次`
+      }
+      exportCountEl.textContent = `累计导出 ${Number(localStorage.getItem('export_count')||'0')} 次`
+
+      document.getElementById('exportPdfBtn').addEventListener('click', ()=>{
+        const opt = { margin:0, filename:'resume.pdf', html2canvas:{scale:2}, jsPDF:{unit:'pt', format:'a4', orientation:'portrait'} }
+        html2pdf().set(opt).from(resume).save().then(bumpExport)
+      })
+
+      document.getElementById('exportImgBtn').addEventListener('click', async ()=>{
+        const opt = { scale:2 }
+        const canvas = await html2pdf().set({ html2canvas: opt }).from(resume).outputImg('datauristring')
+        const a = document.createElement('a')
+        a.href = canvas
+        a.download = 'resume.png'
+        a.click()
+        bumpExport()
+      })
+
+      document.getElementById('modeBtn').addEventListener('click', ()=>{
+        alert('演示模式：当前仅支持 Markdown。可以接入富文本编辑器如 Quill/TipTap。')
+      })
+
+      document.getElementById('wmBtn').addEventListener('click', ()=>{
+        document.body.classList.toggle('no-watermark')
+        alert('已切换水印显示（演示功能）')
+      })
+
+      document.getElementById('aiBtn').addEventListener('click', ()=>{
+        alert('AI 笔试/面试功能：演示占位。可跳转至站内实际模块或外部服务。')
+      })
+
+      document.getElementById('photoBtn').addEventListener('click', ()=>{
+        alert('证件照制作：演示占位。可集成裁剪库（如 cropperjs）实现简单裁剪。')
+      })
+    </script>
+  </body>
+  </html>
+
+

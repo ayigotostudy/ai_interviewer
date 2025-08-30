@@ -1,6 +1,7 @@
 package resumeService
 
 import (
+	"ai_jianli_go/component"
 	"ai_jianli_go/internal/dao"
 	"ai_jianli_go/logs"
 	"ai_jianli_go/types/model"
@@ -10,7 +11,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/components/prompt"
 	"github.com/cloudwego/eino/schema"
 
@@ -72,17 +72,7 @@ func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeR
 	// 从配置中获取API密钥，而不是硬编码
 	// 这里假设已经有一个配置服务可以获取API密钥
 	// apiKey := "" // 实际应用中应该从配置或环境变量中获取
-
-	chatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-		Model:   "gpt-4o",
-		BaseURL: "https://api.vveai.com/v1",
-		APIKey:  "sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81",
-	})
-
-	if err != nil {
-		logs.SugarLogger.Errorf("创建聊天模型失败: %v", err)
-		return nil, common.CodeCreateResumeFail
-	}
+	chatModel := component.GetAIComponent().GetChatModel("gpt-4o")
 
 	res, err := chatModel.Generate(ctx, messages)
 
@@ -163,6 +153,15 @@ func (s *ResumeService) DeleteResume(ctx context.Context, id uint) int64 {
 	if err != nil {
 		logs.SugarLogger.Errorf("删除简历失败: %v", err)
 		return common.CodeDeleteResumeFail
+	}
+	return common.CodeSuccess
+}
+
+func (s *ResumeService) UpdateResume(ctx context.Context, req *req.UpdateResumeRequest) int64 {
+	err := s.dao.UpdateResume(req.ID, req.Content)
+	if err != nil {
+		logs.SugarLogger.Errorf("更新简历失败: %v", err)
+		return common.CodeUpdateResumeFail
 	}
 	return common.CodeSuccess
 }
