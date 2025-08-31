@@ -102,8 +102,19 @@
 
       <div class="interview-sidebar">
         <div class="sidebar-section">
-          <h4>面试记录</h4>
-          <div v-if="interviewRecords.length > 0">
+          <div class="section-header">
+            <h4>面试记录</h4>
+            <button 
+              v-if="interviewRecords.length > 0" 
+              class="toggle-btn" 
+              @click="toggleRecords"
+              :class="{ 'expanded': showRecords }"
+            >
+              <span class="icon">{{ showRecords ? '📖' : '📋' }}</span>
+              {{ showRecords ? '收起' : '展开' }}
+            </button>
+          </div>
+          <div v-if="interviewRecords.length > 0 && showRecords" class="records-container">
             <div v-for="record in interviewRecords" :key="record.id" class="record-item">
               <div class="record-header">
                 <span class="record-time">{{ formatTime(record.timestamp) }}</span>
@@ -114,31 +125,35 @@
               <p class="record-content">{{ record.content }}</p>
             </div>
           </div>
+          <div v-else-if="interviewRecords.length > 0" class="records-summary">
+            <p class="summary-text">共有 {{ interviewRecords.length }} 条面试记录</p>
+            <button class="view-records-btn" @click="toggleRecords">
+              <span class="icon">👁️</span>
+              查看记录
+            </button>
+          </div>
           <p v-else class="no-data">暂无面试记录</p>
         </div>
 
         <div class="sidebar-section">
-          <h4>面试评估</h4>
-          <div v-if="interview.evaluation">
-            <div class="evaluation-item">
-              <span class="label">综合评分：</span>
-              <span class="score">{{ interview.evaluation.score }}/100</span>
+          <div class="section-header">
+            <h4>面试评估</h4>
+            <button 
+              v-if="interview.evaluation" 
+              class="view-evaluation-btn" 
+              @click="viewEvaluation"
+            >
+              <span class="icon">📊</span>
+              查看详细评价
+            </button>
+          </div>
+          <div v-if="interview.evaluation" class="evaluation-summary">
+            <div class="evaluation-score">
+              <span class="score-value">{{ interview.evaluation.score || 0 }}</span>
+              <span class="score-label">/ 100</span>
             </div>
-            <div class="evaluation-item">
-              <span class="label">技术能力：</span>
-              <span class="score">{{ interview.evaluation.technical }}/100</span>
-            </div>
-            <div class="evaluation-item">
-              <span class="label">沟通能力：</span>
-              <span class="score">{{ interview.evaluation.communication }}/100</span>
-            </div>
-            <div class="evaluation-item">
-              <span class="label">团队协作：</span>
-              <span class="score">{{ interview.evaluation.teamwork }}/100</span>
-            </div>
-            <div class="evaluation-item">
-              <span class="label">总体评价：</span>
-              <span class="comment">{{ interview.evaluation.comment }}</span>
+            <div class="evaluation-brief">
+              <p class="brief-text">{{ interview.evaluation.comment || '暂无详细评价' }}</p>
             </div>
           </div>
           <p v-else class="no-data">暂无评估结果</p>
@@ -146,7 +161,7 @@
 
         <div class="sidebar-section">
           <h4>快捷操作</h4>
-          <button class="action-btn primary" @click="startInterview" v-if="interview.status === 'planned'">
+          <button class="action-btn primary" @click="startInterview" v-if="interview.status === 'planned' || interview.status === 'interviewing'">
             <span class="icon">▶️</span>
             开始面试
           </button>
@@ -178,10 +193,13 @@ const interview = ref<any>({})
 const resume = ref<any>({})
 const interviewRecords = ref<any[]>([])
 
+// 面试记录展示状态
+const showRecords = ref(false)
+
 const getStatusClass = (status: string) => {
   const statusClasses: { [key: string]: string } = {
     planned: 'status-planned',
-    in_progress: 'status-progress',
+    interviewing: 'status-progress',
     completed: 'status-completed',
     canceled: 'status-canceled'
   }
@@ -191,7 +209,7 @@ const getStatusClass = (status: string) => {
 const getStatusText = (status: string) => {
   const statusTexts: { [key: string]: string } = {
     planned: '待开始',
-    in_progress: '进行中',
+    interviewing: '进行中',
     completed: '已完成',
     canceled: '已取消'
   }
@@ -293,10 +311,36 @@ const renderMarkdown = (markdown: string): string => {
   return html
 }
 
-const formatTime = (timestamp: number) => {
+const formatTime = (timestamp: any) => {
   if (!timestamp) return '未知时间'
-  const date = new Date(timestamp * 1000)
-  return date.toLocaleString('zh-CN')
+  
+  let date: Date
+  
+  // 如果是数字，假设是Unix时间戳（秒）
+  if (typeof timestamp === 'number') {
+    date = new Date(timestamp * 1000)
+  } 
+  // 如果是字符串，尝试解析
+  else if (typeof timestamp === 'string') {
+    date = new Date(timestamp)
+  } 
+  // 其他情况，直接使用
+  else {
+    date = new Date(timestamp)
+  }
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return '无效日期'
+  }
+  
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const goBack = () => {
@@ -374,6 +418,30 @@ const loadInterviewDetail = async () => {
       if (interview.value.resume_id) {
         await loadResumeData()
       }
+      
+      // 从remark字段解析评价数据
+      if (interview.value.remark) {
+        try {
+          const remarkData = JSON.parse(interview.value.remark)
+          if (remarkData.overallEvaluation) {
+            interview.value.evaluation = {
+              score: remarkData.overallEvaluation.score || 0,
+              rating: remarkData.overallEvaluation.rating || '暂无',
+              comment: remarkData.answerAnalysis?.interviewEvaluation || '暂无详细评价'
+            }
+          }
+        } catch (parseError) {
+          // 如果解析失败，设置默认值
+          interview.value.evaluation = {
+            score: 0,
+            rating: '暂无',
+            comment: '暂无详细评价'
+          }
+        }
+      }
+      
+      // 面试详情加载完成后，加载面试记录
+      await loadInterviewRecords()
     } else {
       console.error('获取面试详情失败:', response.data.msg)
       alert('获取面试详情失败: ' + response.data.msg)
@@ -400,23 +468,80 @@ const loadResumeData = async () => {
   }
 }
 
+// 切换面试记录显示
+const toggleRecords = () => {
+  showRecords.value = !showRecords.value
+}
+
 const loadInterviewRecords = async () => {
   try {
-    // 面试记录暂时为空，等待后端提供相关API
-    // const response = await getInterviewRecords(route.params.id)
-    // if (response.data.code === 1000) {
-    //   interviewRecords.value = response.data.data
-    // }
-    interviewRecords.value = []
+    // 从面试详情中获取面试记录
+    if (interview.value.interview_record) {
+      const recordText = interview.value.interview_record
+      const records = []
+      
+      // 解析面试记录文本，提取对话内容
+      const lines = recordText.split('\n')
+      let currentRecord = null
+      let recordIndex = 0
+      
+      for (const line of lines) {
+        if (line.startsWith('user: ')) {
+          if (currentRecord) {
+            records.push(currentRecord)
+          }
+          currentRecord = {
+            id: records.length + 1,
+            timestamp: interview.value.created_at ? new Date(interview.value.created_at).getTime() / 1000 + recordIndex * 300 : Date.now() / 1000 + recordIndex * 300,
+            type: 'answer',
+            content: line.replace('user: ', '').trim()
+          }
+          recordIndex++
+        } else if (line.startsWith('assistant: ')) {
+          if (currentRecord) {
+            records.push(currentRecord)
+          }
+          currentRecord = {
+            id: records.length + 1,
+            timestamp: interview.value.created_at ? new Date(interview.value.created_at).getTime() / 1000 + recordIndex * 300 : Date.now() / 1000 + recordIndex * 300,
+            type: 'question',
+            content: line.replace('assistant: ', '').split('\n')[0].trim() // 只取第一行
+          }
+          recordIndex++
+        }
+      }
+      
+      if (currentRecord) {
+        records.push(currentRecord)
+      }
+      
+      interviewRecords.value = records
+      console.log('面试记录解析结果:', records)
+    } else {
+      interviewRecords.value = []
+      console.log('没有面试记录数据')
+    }
   } catch (error) {
-    console.error('获取面试记录失败:', error)
+    console.error('解析面试记录失败:', error)
+    interviewRecords.value = []
   }
 }
 
 onMounted(() => {
   loadInterviewDetail()
   // loadResumeData() 已在 loadInterviewDetail 中调用
-  loadInterviewRecords()
+  // loadInterviewRecords() 已在 loadInterviewDetail 中调用
+  
+  // 调试信息
+  setTimeout(() => {
+    console.log('面试记录数量:', interviewRecords.value.length)
+    console.log('面试评估数据:', interview.value.evaluation)
+    console.log('showRecords状态:', showRecords.value)
+    console.log('面试记录原始数据:', interview.value.interview_record)
+    console.log('评价原始数据:', interview.value.remark)
+    console.log('创建时间原始值:', interview.value.created_at)
+    console.log('创建时间格式化后:', formatTime(interview.value.created_at))
+  }, 1000)
 })
 </script>
 
@@ -842,6 +967,21 @@ onMounted(() => {
   padding-bottom: 0.5rem;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #F3F4F6;
+  padding-bottom: 0.5rem;
+}
+
+.section-header h4 {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
 .record-item {
   padding: 1rem;
   background: #F9FAFB;
@@ -922,6 +1062,86 @@ onMounted(() => {
   color: #1F2937;
   font-weight: 600;
   font-size: 0.9rem;
+}
+
+/* 按钮样式 */
+.toggle-btn, .view-evaluation-btn, .view-records-btn {
+  background: #F3F4F6;
+  color: #374151;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover, .view-evaluation-btn:hover, .view-records-btn:hover {
+  background: #E5E7EB;
+  transform: translateY(-1px);
+}
+
+.toggle-btn.expanded {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* 面试记录相关样式 */
+.records-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.records-summary {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.summary-text {
+  margin: 0 0 0.75rem 0;
+  color: #6B7280;
+  font-size: 0.9rem;
+}
+
+/* 面试评估相关样式 */
+.evaluation-summary {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.evaluation-score {
+  margin-bottom: 1rem;
+}
+
+.score-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #10B981;
+}
+
+.score-label {
+  font-size: 1rem;
+  color: #6B7280;
+  margin-left: 0.25rem;
+}
+
+.evaluation-brief {
+  text-align: left;
+}
+
+.brief-text {
+  margin: 0;
+  color: #374151;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .evaluation-item .comment {

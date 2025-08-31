@@ -115,7 +115,7 @@
           <select v-model="statusFilter" @change="filterInterviews">
             <option value="all">全部状态</option>
             <option value="planned">待开始</option>
-            <option value="in_progress">进行中</option>
+                            <option value="interviewing">进行中</option>
             <option value="completed">已完成</option>
             <option value="canceled">已取消</option>
           </select>
@@ -174,7 +174,7 @@
               </button>
               
               <button 
-                v-if="interview.status === 'planned'" 
+                v-if="interview.status === 'planned' || interview.status === 'interviewing'" 
                 class="action-btn start-btn" 
                 @click="startInterview(interview.id)"
               >
@@ -262,7 +262,7 @@ const filteredInterviews = ref<any[]>([])
 const getStatusClass = (status: string) => {
   const statusClasses: { [key: string]: string } = {
     planned: 'status-planned',
-    in_progress: 'status-progress',
+    interviewing: 'status-progress',
     completed: 'status-completed',
     canceled: 'status-canceled'
   }
@@ -272,7 +272,7 @@ const getStatusClass = (status: string) => {
 const getStatusText = (status: string) => {
   const statusTexts: { [key: string]: string } = {
     planned: '待开始',
-    in_progress: '进行中',
+    interviewing: '进行中',
     completed: '已完成',
     canceled: '已取消'
   }

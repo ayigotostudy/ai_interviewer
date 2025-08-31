@@ -12,6 +12,7 @@ type Config struct {
 	Redis `yaml:"redis"`
 	//EmailInfo `yaml:"email"`
 	Speech `yaml:"speech"`
+	LocalPath `yaml:"localPath"`
 }
 
 type MySQL struct {
@@ -41,6 +42,10 @@ type Speech struct {
 	APIKey    string `yaml:"apiKey"`
 	APISecret string `yaml:"apiSecret"`
 	AppID     string `yaml:"appId"`
+}
+
+type LocalPath struct {
+	Path string `yaml:"path"`
 }
 
 var config Config
@@ -78,6 +83,10 @@ func GetMySQLConfig() MySQL {
 
 func GetRedisConfig() Redis {
 	return config.Redis
+}
+
+func GetLocalPathConfig() LocalPath {
+	return config.LocalPath
 }
 
 // func GetEmailInfo() EmailInfo {

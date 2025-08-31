@@ -174,7 +174,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { createResume, getResumeDetail } from '@/service/resume'
+import { createResume, updateResume, getResumeDetail } from '@/service/resume'
 import ResumeShow from '@/components/ResumeShow.vue'
 
 const router = useRouter()
@@ -245,7 +245,21 @@ const saveResume = async () => {
 
   saving.value = true
   try {
+    // 从token中获取用户ID
+    const token = localStorage.getItem('token')
+    let userId = 1 // 默认值
+    
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        userId = payload.ID || 1
+      } catch (e) {
+        console.warn('无法解析token中的用户ID，使用默认值:', e)
+      }
+    }
+
     const apiData = {
+      user_id: userId,
       name: resumeData.value.name,
       basic_info: resumeData.value.basic_info,
       work_exp: resumeData.value.work_exp,
@@ -255,11 +269,24 @@ const saveResume = async () => {
       target_job: resumeData.value.target_job,
       awards: resumeData.value.awards,
       template_id: resumeData.value.template_id,
-      status: resumeData.value.status
+      status: resumeData.value.status,
+      content: resumeData.value.content
     }
+    
+    console.log('保存简历数据:', apiData)
+    console.log('content字段内容:', resumeData.value.content)
 
-    await createResume(apiData)
-    alert('简历保存成功！')
+    const id = route.params.id as string | undefined
+    if (id) {
+      // 编辑模式：调用更新接口
+      await updateResume(Number(id), apiData)
+      alert('简历更新成功！')
+    } else {
+      // 新建模式：调用创建接口
+      await createResume(apiData)
+      alert('简历创建成功！')
+    }
+    
     router.push('/resume')
   } catch (error) {
     console.error('保存简历失败:', error)
@@ -279,6 +306,7 @@ const loadResumeData = async () => {
     // 期望后端返回格式：{ code, data }
     const data = response?.data?.data || response?.data
     if (data) {
+      console.log('从API获取的简历数据:', data)
       resumeData.value = {
         name: data.name || '',
         basic_info: data.basic_info || '',
@@ -292,6 +320,7 @@ const loadResumeData = async () => {
         template_id: data.template_id || 1,
         status: data.status || 'draft'
       }
+      console.log('设置后的resumeData:', resumeData.value)
     }
   } catch (error) {
     console.error('获取简历详情失败:', error)

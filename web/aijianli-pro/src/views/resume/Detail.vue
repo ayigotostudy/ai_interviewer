@@ -156,7 +156,7 @@ const getStatusText = (status: number) => {
 const getInterviewStatusClass = (status: string) => {
   const statusClasses: { [key: string]: string } = {
     planned: 'status-planned',
-    in_progress: 'status-progress',
+    interviewing: 'status-progress',
     completed: 'status-completed',
     canceled: 'status-canceled'
   }
@@ -166,7 +166,7 @@ const getInterviewStatusClass = (status: string) => {
 const getInterviewStatusText = (status: string) => {
   const statusTexts: { [key: string]: string } = {
     planned: '待开始',
-    in_progress: '进行中',
+    interviewing: '进行中',
     completed: '已完成',
     canceled: '已取消'
   }

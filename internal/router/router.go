@@ -2,7 +2,7 @@ package router
 
 import (
 	"github.com/gin-contrib/cors"
-	_"github.com/gin-contrib/pprof"
+	_ "github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,6 +28,7 @@ func Init() *gin.Engine {
 	meeting(v1.Group("/meeting"))
 	user(v1.Group("/user"))
 	speech(v1.Group("/speech"))
+	wiki(v1.Group("/wiki"))
 
 	return r
 }

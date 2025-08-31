@@ -111,6 +111,44 @@
         </div>
       </div>
 
+      <!-- 文字面试评价卡片 -->
+      <div v-if="evaluationData.interviewEvaluation" class="evaluation-card text-evaluation">
+        <div class="card-header">
+          <h3>文字面试评价</h3>
+          <p>AI面试官的综合评价总结</p>
+        </div>
+        <div class="card-content">
+          <div class="evaluation-text">
+            <p>{{ evaluationData.interviewEvaluation }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 改进建议卡片 -->
+      <div v-if="evaluationData.improvablePoints && evaluationData.improvablePoints.length > 0" class="evaluation-card improvement">
+        <div class="card-header">
+          <h3>改进建议</h3>
+          <p>针对性的能力提升建议</p>
+        </div>
+        <div class="card-content">
+          <div class="improvement-list">
+            <div 
+              v-for="(point, index) in evaluationData.improvablePoints" 
+              :key="index"
+              class="improvement-item"
+            >
+              <div class="improvement-header">
+                <span class="improvement-number">{{ index + 1 }}</span>
+                <span class="improvement-title">{{ point.split('：')[0] }}</span>
+              </div>
+              <div class="improvement-content">
+                {{ point.split('：')[1] || point }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-container">
         <div class="loading-spinner"></div>
@@ -162,10 +200,6 @@ const goBack = () => {
   router.back()
 }
 
-
-
-
-
 // 获取分数等级样式
 const getScoreClass = (score: number) => {
   if (!score) return 'default'
@@ -205,17 +239,37 @@ const loadEvaluation = async () => {
               dataToSet = JSON.parse(dataToSet)
 
             } catch (parseError) {
-              console.error('JSON解析失败:', parseError)
               dataToSet = evaluationResponse.data.data
             }
           }
           
-          evaluationData.value = dataToSet
-
+          // 检查数据是否完整，如果不完整则使用模拟数据
+          // 注意：interviewEvaluation 和 improvablePoints 可能在 answerAnalysis 中
+          const hasInterviewEvaluation = dataToSet.interviewEvaluation || 
+                                       (dataToSet.answerAnalysis && dataToSet.answerAnalysis.interviewEvaluation)
+          const hasImprovablePoints = dataToSet.improvablePoints || 
+                                    (dataToSet.answerAnalysis && dataToSet.answerAnalysis.improvablePoints && 
+                                     dataToSet.answerAnalysis.improvablePoints.length > 0)
           
-          // 等待 DOM 更新后初始化图表
-          await nextTick()
-          initCharts()
+          if (hasInterviewEvaluation && hasImprovablePoints) {
+            // 如果字段在根级别，直接使用
+            if (dataToSet.interviewEvaluation && dataToSet.improvablePoints) {
+              evaluationData.value = dataToSet
+            } else {
+              // 如果字段在 answerAnalysis 中，需要重新组织数据结构
+              evaluationData.value = {
+                ...dataToSet,
+                interviewEvaluation: dataToSet.answerAnalysis.interviewEvaluation,
+                improvablePoints: dataToSet.answerAnalysis.improvablePoints
+              }
+            }
+            
+            // 等待 DOM 更新后初始化图表
+            await nextTick()
+            initCharts()
+          } else {
+            await loadMockEvaluationData()
+          }
         } else if (evaluationResponse.data && evaluationResponse.data.data) {
           // 如果状态码不是1000但有data字段，尝试使用
           let dataToSet = evaluationResponse.data.data
@@ -224,13 +278,28 @@ const loadEvaluation = async () => {
               dataToSet = JSON.parse(dataToSet)
 
             } catch (parseError) {
-              console.error('备用方案：JSON解析失败:', parseError)
               dataToSet = evaluationResponse.data.data
             }
           }
           
           if (dataToSet && dataToSet.overallEvaluation) {
-            evaluationData.value = dataToSet
+            // 检查是否有 interviewEvaluation 和 improvablePoints
+            const hasInterviewEvaluation = dataToSet.interviewEvaluation || 
+                                         (dataToSet.answerAnalysis && dataToSet.answerAnalysis.interviewEvaluation)
+            const hasImprovablePoints = dataToSet.improvablePoints || 
+                                      (dataToSet.answerAnalysis && dataToSet.answerAnalysis.improvablePoints && 
+                                       dataToSet.answerAnalysis.improvablePoints.length > 0)
+            
+            if (hasInterviewEvaluation && hasImprovablePoints) {
+              // 重新组织数据结构
+              evaluationData.value = {
+                ...dataToSet,
+                interviewEvaluation: dataToSet.interviewEvaluation || dataToSet.answerAnalysis.interviewEvaluation,
+                improvablePoints: dataToSet.improvablePoints || dataToSet.answerAnalysis.improvablePoints
+              }
+            } else {
+              evaluationData.value = dataToSet
+            }
 
             await nextTick()
             initCharts()
@@ -249,7 +318,6 @@ const loadEvaluation = async () => {
       }
     }
   } catch (error) {
-    console.error('加载面试评价失败:', error)
     // 使用模拟数据作为备选
     await loadMockEvaluationData()
   } finally {
@@ -300,12 +368,19 @@ const loadMockEvaluationData = async () => {
         matchedKeywords: ["Java", "Spring Boot", "MySQL", "微服务"],
         missingKeywords: ["Redis", "消息队列", "容器化", "Kubernetes"]
       }
-    }
+    },
+    interviewEvaluation: "候选人整体表现良好，具备扎实的专业技术功底和清晰的逻辑思维能力。在面试过程中能够围绕Spring Boot、微服务架构和MySQL等核心技术栈展开深入讨论，展现出较强的系统设计能力和问题解决导向。候选人学习能力较好，对新知识保持求知欲，但在高压环境下的稳定性与团队协作意识有进一步提升空间。其技术能力与当前岗位要求有较高匹配度，但在分布式中间件和云原生技术领域存在经验缺口。",
+    improvablePoints: [
+      "团队协作能力有待加强：在跨部门沟通和团队项目协作中表现较为被动，需提升倾听他人意见、整合团队资源的意识与能力[1](@ref)。",
+      "抗压性与情绪管理：在压力情境下表现出一定的紧张感，需增强应对复杂问题和紧迫任务的稳定性与韧性[5](@ref)。",
+      "技术广度需扩展：缺乏Redis缓存应用、消息队列及容器化技术（如Docker/K8s）的实战经验，需针对性补充分布式系统相关知识[3](@ref)。",
+      "表达精炼度不足：技术描述有时过于细节，需提升结构化表达和总结概括能力，增强与非技术人员的沟通效果[1](@ref)。",
+      "岗位匹配度提升：虽然基础技能扎实，但仍需弥补JD中明确的'消息队列'和'容器化'要求，可通过快速学习或项目实践补足[3](@ref)。"
+    ]
   }
   
   // 等待 DOM 更新后初始化图表
   await nextTick()
-  console.log('模拟数据加载完成，开始初始化图表')
   initCharts()
 }
 
@@ -821,6 +896,73 @@ onUnmounted(() => {
   font-size: 1.2rem;
   font-weight: 600;
   color: #1f2937;
+}
+
+/* 文字面试评价卡片样式 */
+.text-evaluation .evaluation-text {
+  line-height: 1.8;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.text-evaluation .evaluation-text p {
+  margin: 0;
+  text-align: justify;
+}
+
+/* 改进建议卡片样式 */
+.improvement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.improvement-item {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.improvement-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: #cbd5e0;
+}
+
+.improvement-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.improvement-number {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.improvement-title {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.improvement-content {
+  color: #4b5563;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  padding-left: 3rem;
 }
 
 .wordcloud-chart {

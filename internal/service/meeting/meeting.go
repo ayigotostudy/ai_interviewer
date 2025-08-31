@@ -28,6 +28,7 @@ const (
 	PLANED       = "planed"
 	INTERVIEWING = "interviewing"
 	COMPLETED    = "completed"
+	CANCELED     = "canceled"
 )
 
 // 创建面试
@@ -39,7 +40,6 @@ func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 		JobDescription: request.JobDescription,
 		Time:           request.Time,
 		Status:         PLANED,
-		Remark:         request.Remark,
 	}
 	err := s.dao.Create(meeting)
 	if err != nil {
@@ -74,9 +74,15 @@ func (s *MeetingService) Update(request *req.UpdateMeetingReq) int64 {
 	}
 	if request.Status != "" {
 		meeting.Status = request.Status
-	}
-	if request.Remark != "" {
-		meeting.Remark = request.Remark
+		if request.Status == COMPLETED {
+			memory := rag.NewRedisMemory(rag.RedisMemoryConfig{
+				RedisOptions:  component.GetRedisDB(),
+				MaxWindowSize: 20,
+			})
+			con := memory.GetConversation(fmt.Sprintf("%d", request.ID), false)
+			meeting.InterviewNumber = con.GetRoundCount()
+			meeting.InterviewRecord = con.String()
+		}
 	}
 
 	err = s.dao.Update(meeting)
@@ -144,23 +150,16 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		return "", common.CodeMeetingNotExist
 	}
 
+	// 检查面试状态
+	if meeting.Status == CANCELED {
+		return "", common.CodeMeetingCompleted
+	}
+
 	if meeting.Resume == "" {
 		return "", common.CodeResumeNotExist
 	}
 
-	// 1. 获取简历内容
-	resume, code := s.GetResume(request.MeetingID)
-	if code != common.CodeSuccess {
-		return "", code
-	}
-
-	// 2. 获取面试信息
-	meeting, code = s.Get(request.MeetingID)
-	if code != common.CodeSuccess {
-		return "", code
-	}
-
-	// 3. 获取历史对话
+	// 获取历史对话
 	ctx := context.Background()
 	memory := rag.NewRedisMemory(rag.RedisMemoryConfig{
 		MaxWindowSize: 20,
@@ -172,6 +171,8 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	// 检查面试轮数
 	if con.GetRoundCount() >= 20 {
 		meeting.Status = COMPLETED
+		meeting.InterviewNumber = con.GetRoundCount()
+		meeting.InterviewRecord = con.String()
 		if err = s.dao.Update(meeting); err != nil {
 			logs.SugarLogger.Errorf("更新面试轮数失败: %v", err)
 			return "", common.CodeServerBusy
@@ -180,9 +181,9 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	}
 
 	if con.GetLastConversationsKnowledge() == "" {
-		con.SetLastConversationKnowledge(resume)
+		con.SetLastConversationKnowledge(meeting.Resume)
 	}
-	// 4. 获取知识库相关内容
+	// 获取知识库相关内容
 	retriever := rag.GetRetriever()
 	docs, err := retriever.Retrieve(ctx, con.GetLastConversationsKnowledge())
 	if err != nil {
@@ -190,7 +191,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		return "", common.CodeServerBusy
 	}
 
-	// 5. 构建上下文
+	// 构建上下文
 	context := ""
 	if len(docs) > 0 {
 		contextParts := make([]string, len(docs))
@@ -200,10 +201,10 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		context = strings.Join(contextParts, "\n---\n")
 	}
 
-	// 6. 创建对话模型
+	// 创建对话模型
 	chatModel := component.GetAIComponent().GetChatModel("gpt-4o")
 
-	// 7. 创建提示模板
+	// 创建提示模板
 	template := prompt.FromMessages(schema.FString,
 		schema.SystemMessage(
 			"你是一个专业面试官，需要完成以下任务：\n"+
@@ -233,11 +234,11 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 		),
 	)
 
-	// 8. 构建提示
+	// 构建提示
 	prompt := map[string]any{
 		"context":         context,
 		"answer":          request.Answer,
-		"resume":          resume,
+		"resume":          meeting.Resume,
 		"history":         con.String(),
 		"job_description": meeting.JobDescription,
 	}
@@ -265,12 +266,13 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	if con.GetRoundCount() >= 20 {
 		meeting.Status = COMPLETED
 		meeting.InterviewRecord = con.String()
+		meeting.InterviewNumber = con.GetRoundCount()
 		if err := s.dao.Update(meeting); err != nil {
 			logs.SugarLogger.Errorf("更新面试记录失败: %v", err)
 			return "", common.CodeServerBusy
 		}
 	}
-	
+
 	return res.Content, common.CodeSuccess
 }
 
@@ -317,7 +319,7 @@ func (s *MeetingService) GetRemark(ctx context.Context, req *req.GetRemarkReq) (
 	model := component.GetAIComponent().GetChatModel("gpt-4o")
 	template := prompt.FromMessages(schema.FString,
 		schema.SystemMessage(
-			"你是一个专业的面试官，需要根据面试记录以及岗位描述，生成胜任力维度得分、答题内容分析和总体得分三大板块json数据。\n"+
+			"你是一个专业的面试官，需要根据面试记录以及岗位描述，生成胜任力维度得分、答题内容分析和总体得分, 面试文字评价和可改进点五大板块json数据。\n"+
 				"重要要求：\n"+
 				"1. 你必须只返回一个纯净的JSON对象，不要有任何额外的前缀、后缀、解释或Markdown代码块标记（如```json）。\n"+
 				"2. JSON必须严格遵循我已提供的格式。\n"+
@@ -429,7 +431,14 @@ const output = `
       "matchPercentage": 76,
       "matchedKeywords": ["Java", "Spring Boot", "MySQL", "云计算"],
       "missingKeywords": ["Redis", "消息队列", "容器化"]
-    }
-  }
+    },
+	"interviewEvaluation": "候选人整体表现良好，具备扎实的专业技术功底和清晰的逻辑思维能力。在面试过程中能够围绕Spring Boot、微服务架构和MySQL等核心技术栈展开深入讨论，展现出较强的系统设计能力和问题解决导向。候选人学习能力较好，对新知识保持求知欲，但在高压环境下的稳定性与团队协作意识有进一步提升空间。其技术能力与当前岗位要求有较高匹配度，但在分布式中间件和云原生技术领域存在经验缺口。",
+  	"improvablePoints": [
+    "团队协作能力有待加强：在跨部门沟通和团队项目协作中表现较为被动，需提升倾听他人意见、整合团队资源的意识与能力[1](@ref)。",
+    "抗压性与情绪管理：在压力情境下表现出一定的紧张感，需增强应对复杂问题和紧迫任务的稳定性与韧性[5](@ref)。",
+    "技术广度需扩展：缺乏Redis缓存应用、消息队列及容器化技术（如Docker/K8s）的实战经验，需针对性补充分布式系统相关知识[3](@ref)。",
+    "表达精炼度不足：技术描述有时过于细节，需提升结构化表达和总结概括能力，增强与非技术人员的沟通效果[1](@ref)。",
+    "岗位匹配度提升：虽然基础技能扎实，但仍需弥补JD中明确的‘消息队列’和‘容器化’要求，可通过快速学习或项目实践补足[3](@ref)。"
+  	]
 }
 `

@@ -67,6 +67,10 @@
                 <span class="icon">📊</span>
                 评价总结
               </button>
+              <button class="action-btn end-btn" @click="endInterview" :disabled="isSubmitting">
+                <span class="icon">⏹️</span>
+                结束面试
+              </button>
 
             </div>
           </div>
@@ -288,7 +292,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getMeetingDetail, uploadResume } from '@/service/meeting'
+import { getMeetingDetail, uploadResume, updateMeeting } from '@/service/meeting'
 import { getResumeDetail, getResumeList, type ResumeListItem } from '@/service/resume'
 import { recognizeSpeech, previewPcmAudio, testSpeechAPI as testSpeechService } from '@/service/speech'
 import { aiInterview } from '@/service/meeting'
@@ -930,6 +934,29 @@ const loadInterviewData = async () => {
 
         }
         
+        // 如果面试状态为"计划中"，自动更新为"进行中"
+        if (interviewData.status === 'planned') {
+          try {
+            await updateMeeting({
+              id: parseInt(interviewId),
+              user_id: 1, // 假设当前用户ID为1，实际应该从用户状态获取
+              candidate: interviewData.candidate,
+              position: interviewData.position,
+              job_description: interviewData.job_description || '',
+              time: interviewData.time,
+              status: 'interviewing',
+              interview_record: interviewData.interview_record || '',
+              interview_summary: interviewData.interview_summary || ''
+            })
+            
+            // 更新本地状态
+            interview.value.status = 'interviewing'
+            console.log('面试状态已更新为进行中')
+          } catch (updateError) {
+            console.error('更新面试状态失败:', updateError)
+          }
+        }
+        
         // 直接使用面试数据中的resume字段
         if (interviewData.resume) {
           resume.value = {
@@ -959,6 +986,38 @@ const exportInterviewRecord = () => {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+// 结束面试
+const endInterview = async () => {
+  if (!confirm('确定要结束这场面试吗？结束后将无法继续对话。')) {
+    return
+  }
+  
+  try {
+    const interviewId = route.params.id as string
+    if (interviewId) {
+      await updateMeeting({
+        id: parseInt(interviewId),
+        user_id: 1, // 假设当前用户ID为1，实际应该从用户状态获取
+        candidate: interview.value.candidate,
+        position: interview.value.position,
+        job_description: interview.value.job_description || '',
+        time: interview.value.time || 0,
+        status: 'completed',
+        interview_record: interviewRecord.value,
+        interview_summary: ''
+      })
+      
+      // 更新本地状态
+      interview.value.status = 'completed'
+      alert('面试已成功结束！')
+      console.log('面试状态已更新为已完成')
+    }
+  } catch (error) {
+    console.error('结束面试失败:', error)
+    alert('结束面试失败，请重试')
+  }
 }
 
 // 跳转到创建简历页面
@@ -1233,7 +1292,7 @@ const getStatusClass = (status: string): string => {
   switch (status) {
     case 'pending':
       return 'status-pending'
-    case 'in_progress':
+    case 'interviewing':
       return 'status-progress'
     case 'completed':
       return 'status-completed'
@@ -1249,7 +1308,7 @@ const getStatusText = (status: string): string => {
   switch (status) {
     case 'pending':
       return '待开始'
-    case 'in_progress':
+    case 'interviewing':
       return '进行中'
     case 'completed':
       return '已完成'
@@ -1561,6 +1620,20 @@ onUnmounted(() => {
 .action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 结束面试按钮特殊样式 */
+.action-btn.end-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: white;
+  font-weight: 600;
+}
+
+.action-btn.end-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
 }
 
 /* 消息容器 */

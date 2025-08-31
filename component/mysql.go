@@ -40,6 +40,7 @@ func initModel() {
 	db.AutoMigrate(model.Meeting{})
 	db.AutoMigrate(model.Resume{})
 	db.AutoMigrate(model.Template{})
+	db.AutoMigrate(model.Wiki{})
 	// 初始化模板
 	// initTemplate()
 }

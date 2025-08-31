@@ -49,6 +49,7 @@ const (
 	CodeGetMeetingFail
 	CodeGetRemarkFail
 	CodeMeetingNotCompleted
+	CodeMeetingCompleted
 )
 
 const (
@@ -76,6 +77,13 @@ const (
 	CodeGetResumeListFail     // 获取简历列表失败
 	CodeDeleteResumeFail      // 删除简历失败
 	CodeUpdateResumeFail      // 更新简历失败
+)
+
+const (
+	// 知识库
+	CodeCreateIndexFailed int64 = 2701 + iota
+	CodeCreateWikiFailed
+	CodeQueryWikiFailed
 )
 
 const (
@@ -141,6 +149,7 @@ var Msg = map[int64]string{
 	CodeGetRemarkFail:         "获取面试备注失败",
 	CodeMeetingNotCompleted:   "面试未完成",
 	CodeGetMeetingFail:        "获取面试记录失败",
+	CodeMeetingCompleted:      "面试已完成",
 
 	// 简历
 	CodeUploadResumeFail:      "上传简历失败",
@@ -152,4 +161,9 @@ var Msg = map[int64]string{
 	CodeGetResumeFail:         "获取简历失败",
 	CodeGetResumeListFail:     "获取简历列表失败",
 	CodeDeleteResumeFail:      "删除简历失败",
+
+	// 知识库
+	CodeCreateIndexFailed: "创建知识库索引失败",
+	CodeCreateWikiFailed: "创建知识库失败",
+	CodeQueryWikiFailed: "查询知识库失败",
 }

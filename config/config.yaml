@@ -25,3 +25,7 @@ speech:
   apiKey: "f6dc47b55c75955899cde1550154455f"
   apiSecret: "YzA2YWEzOTNmNGY1YTA3YjhmMzUyNDEz"
   appId: "af267d58"
+
+# 本地路径
+localPath: 
+  path: "/local/"

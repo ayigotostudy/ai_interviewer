@@ -37,7 +37,6 @@ export interface UpdateMeetingParams {
   job_description: string;
   time: number;
   status: string;
-  remark: string;
   interview_record: string;
   interview_summary: string;
 }

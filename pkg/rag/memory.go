@@ -127,6 +127,12 @@ type Conversation struct {
 	RoundCount                 int    `json:"round_count"` // 对话轮数
 }
 
+type ConversationData struct {
+	Messages                   []*schema.Message `json:"messages"`
+	RoundCount                 int               `json:"round_count"` // 对话轮数
+	LastConversationsKnowledge string            `json:"last_conversations_knowledge"`
+}
+
 func (c *Conversation) Append(msg ...*schema.Message) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -183,7 +189,7 @@ func (c *Conversation) load() error {
 	}
 
 	// 反序列化整个Conversation对象，包括RoundCount
-	conversationData := &Conversation{}
+	conversationData := &ConversationData{}
 	if err := json.Unmarshal([]byte(data), conversationData); err != nil {
 		return fmt.Errorf("failed to unmarshal conversation: %w", err)
 	}
@@ -192,20 +198,17 @@ func (c *Conversation) load() error {
 	c.Messages = conversationData.Messages
 	c.RoundCount = conversationData.RoundCount
 	c.LastConversationsKnowledge = conversationData.LastConversationsKnowledge
-	
+
 	return nil
 }
 
 // 修改save方法，使其保存整个Conversation对象，包括RoundCount
 func (c *Conversation) save() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	ctx := context.Background()
 	// 创建一个副本，不包含client和maxWindowSize等不需要序列化的字段
-	serializableData := &Conversation{
-		Messages:                  c.Messages,
-		RoundCount:                c.RoundCount,
+	serializableData := &ConversationData{
+		Messages:                   c.Messages,
+		RoundCount:                 c.RoundCount,
 		LastConversationsKnowledge: c.LastConversationsKnowledge,
 	}
 

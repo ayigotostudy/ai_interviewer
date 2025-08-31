@@ -1,2 +1,3 @@
-2025-08-31T00:37:17.723+0800	INFO	config: {{124.222.151.35 3306 abc123456:: ai root} {124.222.151.35 6379 abc123456} {f6dc47b55c75955899cde1550154455f YzA2YWEzOTNmNGY1YTA3YjhmMzUyNDEz af267d58}}
-2025-08-31T00:37:17.724+0800	INFO	AI config loaded successfully: map[gpt-3:{Model: BaseURL: APIKey:} gpt-4o:{Model:gpt-4o BaseURL:https://api.vveai.com/v1 APIKey:sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81}]
+2025-08-31T18:45:45.750+0800	INFO	config: {{124.222.151.35 3306 abc123456:: ai root} {124.222.151.35 6379 abc123456} {f6dc47b55c75955899cde1550154455f YzA2YWEzOTNmNGY1YTA3YjhmMzUyNDEz af267d58} {/local/}}
+2025-08-31T18:45:45.751+0800	INFO	AI config loaded successfully: map[gpt-3:{Model: BaseURL: APIKey:} gpt-4o:{Model:gpt-4o BaseURL:https://api.vveai.com/v1 APIKey:sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81}]
+2025-08-31T18:46:13.435+0800	INFO	文件上传成功，保存路径: /Users/mbitiona/ai_study/ai_jianli_go/local/wiki/nb_20250831184613.md

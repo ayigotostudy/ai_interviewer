@@ -11,6 +11,8 @@ export interface CreateResumeParams {
   awards: string
   target_job: string
   template_id: number
+  content: string  // 添加 content 字段
+  status?: string  // 添加可选的 status 字段
 }
 
 // 简历详情响应接口
@@ -69,6 +71,14 @@ export const getResumeList = () => {
 // 获取简历模板
 export const getResumeTemplates = () => {
   return request.get('/resume/template')
+}
+
+// 更新简历
+export const updateResume = (id: number, data: Partial<CreateResumeParams>) => {
+  return request.put('/resume', {
+    id,
+    ...data
+  })
 }
 
 // 删除简历
