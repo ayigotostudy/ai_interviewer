@@ -22,7 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-*.txt
 
 # Go specific ignores
 *.exe
@@ -66,8 +65,17 @@ Thumbs.db
 # Web directory to ignore (per user request)
 web/
 
+# 文档和配置文件
 *.txt
 *.yaml
+*.yml
+*.md
+*.pdf
+
+# 但保留重要的配置文件
+!README.md
+!config.yaml
+!config/*.yaml
 
 # 版本文件
 v*
