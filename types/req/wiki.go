@@ -13,6 +13,7 @@ type CreateWikiRequest struct {
 
 type GetWikiListRequest struct {
 	UserID uint `json:"user_id" form:"user_id"`
+	ParentID uint `json:"parent_id" form:"parent_id"`
 }
 
 type GetWikiRequest struct {

@@ -18,6 +18,7 @@ func NewUserService(dao *dao.UserDAO) *UserService {
 	return &UserService{dao: dao}
 }
 
+// 注册
 func (s *UserService) Register(request *req.RegisterReq) int64 {
 	_, err := s.dao.GetUserByEmail(request.Email)
 	if err == nil {
@@ -25,6 +26,7 @@ func (s *UserService) Register(request *req.RegisterReq) int64 {
 	}
 	encPwd := utils.Encrypt(request.Password)
 	user := &model.User{
+		Role:     model.Common,
 		Email:    request.Email,
 		PassWord: encPwd,
 	}
@@ -36,6 +38,7 @@ func (s *UserService) Register(request *req.RegisterReq) int64 {
 	return common.CodeSuccess
 }
 
+// 登录
 func (s *UserService) Login(request *req.LoginReq) (any, int64) {
 	user, err := s.dao.GetUserByEmail(request.Email)
 	res := resp.LoginResp{

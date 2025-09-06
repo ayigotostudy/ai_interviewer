@@ -1,0 +1,47 @@
+# 游客权限 - 只能访问公开接口
+p, guest, /api/v1/user/login, POST
+p, guest, /api/v1/user/register, POST
+
+# 普通用户权限 - 所有功能
+p, common, /api/v1/resume, POST
+p, common, /api/v1/resume/list, GET
+p, common, /api/v1/resume, GET
+p, common, /api/v1/resume/template, GET
+p, common, /api/v1/resume, DELETE
+p, common, /api/v1/resume, PUT
+p, common, /api/v1/meeting, POST
+p, common, /api/v1/meeting, PUT
+p, common, /api/v1/meeting, GET
+p, common, /api/v1/meeting, DELETE
+p, common, /api/v1/meeting/list, GET
+p, common, /api/v1/meeting/upload_resume, POST
+p, common, /api/v1/meeting/remark, GET
+p, common, /api/v1/meeting/ai_interview, POST
+p, common, /api/v1/speech/recognize, POST
+p, common, /api/v1/wiki, POST
+p, common, /api/v1/wiki/list, GET
+p, common, /api/v1/wiki, GET
+p, common, /api/v1/wiki, DELETE
+p, common, /api/v1/wiki/query, POST
+p, common, /api/v1/wiki/file, GET
+p, common, /api/v1/wiki/list/parent, GET
+p, common, /api/v1/analytics, GET
+p, common, /api/v1/batch/process, POST
+p, common, /api/v1/export, GET
+p, common, /api/v1/admin/users, GET
+p, common, /api/v1/admin/users, POST
+p, common, /api/v1/admin/users, PUT
+p, common, /api/v1/admin/users, DELETE
+p, common, /api/v1/admin/system, GET
+p, common, /api/v1/admin/system, POST
+p, common, /api/v1/admin/logs, GET
+p, common, /api/v1/admin/roles, GET
+p, common, /api/v1/admin/roles, POST
+p, common, /api/v1/admin/roles, PUT
+p, common, /api/v1/admin/roles, DELETE
+
+# 角色继承关系
+g, common, guest
+g, member, common
+g, super_member, member
+g, super_admin, super_member

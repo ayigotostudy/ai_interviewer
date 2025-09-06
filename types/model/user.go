@@ -12,6 +12,14 @@ type USER interface {
 	IsInfoOK() bool
 }
 
+const (
+	Guest       = iota // 游客
+	Common             // 普通用户
+	Member             // 会员
+	SuperMember        // 超级会员
+	SuperAdmin         // 超级管理员
+)
+
 // user
 // 用户基本模型
 type User struct {

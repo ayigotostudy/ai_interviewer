@@ -29,3 +29,8 @@ speech:
 # 本地路径
 localPath: 
   path: "/local/"
+
+# 角色配置
+role:
+  model: "component/auth/casbin/model.conf"
+  policy: "component/auth/casbin/policy.csv"

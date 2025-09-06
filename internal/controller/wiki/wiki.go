@@ -8,6 +8,8 @@ import (
 	"ai_jianli_go/types/model"
 	"ai_jianli_go/types/req"
 	"ai_jianli_go/types/resp/common"
+	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -109,4 +111,46 @@ func (c *WikiController) QueryWiki(ctx *gin.Context) {
 	ctrl.Request.UserID = ctx.GetUint("id")
 	data, code := c.svc.Query(ctrl.Request)
 	ctrl.WithDataJSON(code, data)
+}
+
+func (c *WikiController) GetListByParentId(ctx *gin.Context) {
+	ctrl := controller.NewCtrl[req.GetWikiListRequest](ctx)
+	ctrl.Request.UserID = ctx.GetUint("id")
+	parentId, _ := strconv.ParseUint(ctx.Query("parent_id"), 10, 64)
+	ctrl.Request.ParentID = uint(parentId)
+	wikis, code := c.svc.GetListByParentId(ctrl.Request)
+	ctrl.WithDataJSON(code, wikis)
+}
+
+func (c *WikiController) GetFileByPath(ctx *gin.Context) {
+	// 获取文件路径参数
+	filePath := ctx.Query("path")
+	if filePath == "" {
+		// 返回参数错误
+		controller.NewCtrl[interface{}](ctx).NoDataJSON(common.CodeInvalidParams)
+		return
+	}
+
+	// 检查文件是否存在
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		// 文件不存在，返回错误
+		controller.NewCtrl[interface{}](ctx).NoDataJSON(common.CodeFileNotFound)
+		return
+	} else if err != nil {
+		// 其他错误
+		logs.SugarLogger.Errorf("检查文件状态失败: %v", err)
+		controller.NewCtrl[interface{}](ctx).NoDataJSON(common.CodeFileNotFound)
+		return
+	}
+
+	// 获取文件名用于设置Content-Disposition
+	fileName := filepath.Base(filePath)
+
+	// 设置响应头，确保中文文件名正确显示
+	disposition := fmt.Sprintf("attachment; filename=\"%s\"; filename*=UTF-8''%s",
+		fileName, url.QueryEscape(fileName))
+	ctx.Header("Content-Disposition", disposition)
+
+	// 返回文件内容
+	ctx.File(filePath)
 }

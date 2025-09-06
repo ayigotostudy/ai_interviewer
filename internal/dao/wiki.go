@@ -15,7 +15,7 @@ func (w *WikiDAO) Create(wiki *model.Wiki) error {
 	return w.db.Create(wiki).Error
 }
 
-func (w *WikiDAO) GetWikiList(userId uint) ([]*model.Wiki, int64) {
+func (w *WikiDAO) GetWikiList(userId uint) ([]*model.Wiki, int64, error) {
 	var wikis []*model.Wiki
 	var total int64
 
@@ -31,22 +31,22 @@ func (w *WikiDAO) GetWikiList(userId uint) ([]*model.Wiki, int64) {
 
 	// 查询所有结果（不分页）
 	err := query.Find(&wikis).Error
-	if err != nil {
-		return nil, 0
-	}
 
-	return wikis, total
+	return wikis, total, err
 }
 
-func (w *WikiDAO) GetWiki(id uint, userId uint) (*model.Wiki, int64) {
+func (w *WikiDAO) GetListByParentId(userId uint, parentId uint) ([]*model.Wiki, error) {
+	var wikis []*model.Wiki
+
+	err := w.db.Where("parent_id = ? AND user_id = ?", parentId, userId).Find(&wikis).Error
+	return wikis, err
+}
+
+func (w *WikiDAO) GetWiki(id uint, userId uint) (*model.Wiki, error) {
 	var wiki model.Wiki
 
 	err := w.db.Where("id = ? AND user_id = ?", id, userId).First(&wiki).Error
-	if err != nil {
-		return nil, 0
-	}
-
-	return &wiki, 1
+	return &wiki, err
 }
 
 func (w *WikiDAO) DeleteWiki(request *req.DeleteWikiRequest) int64 {

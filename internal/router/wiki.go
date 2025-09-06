@@ -13,9 +13,11 @@ import (
 func wiki(r *gin.RouterGroup) {
 	ctrl := wikiController.NewWikiController(wikiService.NewWikiService(dao.NewWikiDAO(component.GetMySQLDB())))
 	r.Use(middleware.Auth())
-	r.POST("/", ctrl.CreateWiki)
+	r.POST("", ctrl.CreateWiki)
 	r.GET("/list", ctrl.GetWikiList)
-	r.GET("/", ctrl.GetWiki)
-	r.DELETE("/", ctrl.DeleteWiki)
+	r.GET("", ctrl.GetWiki)
+	r.DELETE("", ctrl.DeleteWiki)
 	r.POST("/query", ctrl.QueryWiki)
+	r.GET("/file", ctrl.GetFileByPath)
+	r.GET("/list/parent", ctrl.GetListByParentId)
 }

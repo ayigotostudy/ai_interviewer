@@ -92,11 +92,14 @@ const (
 	CodeServerBusy        int64 = 4001
 	CodeRecordNotFound    int64 = 5001
 	CodeRateLimitExceeded int64 = 6001
+
+	CodeFileNotFound int64 = 7001
 )
 
 var Msg = map[int64]string{
 	CodeSuccess: "success",
 
+	CodeFileNotFound: "文件不存在",
 	// 认证模块
 	CodeInvalidParams:        "请求参数错误",
 	CodeUserExist:            "用户名已存在",
@@ -164,6 +167,6 @@ var Msg = map[int64]string{
 
 	// 知识库
 	CodeCreateIndexFailed: "创建知识库索引失败",
-	CodeCreateWikiFailed: "创建知识库失败",
-	CodeQueryWikiFailed: "查询知识库失败",
+	CodeCreateWikiFailed:  "创建知识库失败",
+	CodeQueryWikiFailed:   "查询知识库失败",
 }

@@ -96,17 +96,33 @@ func (s *WikiService) loadDocuments(filePath string) ([]*schema.Document, error)
 }
 
 func (s *WikiService) GetWikiList(request *req.GetWikiListRequest) ([]*model.Wiki, int64) {
-	return s.wikiDAO.GetWikiList(request.UserID)
+	wikiList, _, err := s.wikiDAO.GetWikiList(request.UserID)
+	if err != nil {
+		return nil, common.CodeQueryWikiFailed
+	}
+	return wikiList, common.CodeSuccess
+}
+
+func (s *WikiService) GetListByParentId(request *req.GetWikiListRequest) ([]*model.Wiki, int64) {
+	wikiList, err := s.wikiDAO.GetListByParentId(request.UserID, request.ParentID)
+	if err != nil {
+		return nil, common.CodeQueryWikiFailed
+	}
+	return wikiList, common.CodeSuccess
 }
 
 func (s *WikiService) GetWiki(request *req.GetWikiRequest) (*model.Wiki, int64) {
-	return s.wikiDAO.GetWiki(request.ID, request.UserID)
+	wiki, err := s.wikiDAO.GetWiki(request.ID, request.UserID)
+	if err != nil {
+		return nil, common.CodeQueryWikiFailed
+	}
+	return wiki, common.CodeSuccess
 }
 
 func (s *WikiService) DeleteWiki(request *req.DeleteWikiRequest) int64 {
-	return s.wikiDAO.DeleteWiki(request)
+	s.wikiDAO.DeleteWiki(request)
+	return common.CodeSuccess
 }
-
 
 func (s *WikiService) Query(request *req.QueryWikiRequest) (string, int64) {
 	wiki := &model.Wiki{
@@ -143,7 +159,7 @@ func (s *WikiService) Query(request *req.QueryWikiRequest) (string, int64) {
 		),
 	)
 	prompt := map[string]any{
-		"input":  request.Query,
+		"input":   request.Query,
 		"context": contexts,
 	}
 	ctx := context.Background()
