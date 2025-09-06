@@ -1,9 +1,0 @@
-gpt-4o:
-  Model:   "gpt-4o"
-  BaseURL: "https://api.vveai.com/v1"
-  APIKey:  "sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81"
-
-gpt-3.5-turbo:
-  Model:   "gpt-3.5-turbo"
-  BaseURL: "https://api.vveai.com/v1"
-  APIKey:  "sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81"

@@ -72,10 +72,10 @@ web/
 *.md
 *.pdf
 
-# 但保留重要的配置文件
+# 但保留项目说明文档和配置模板
 !README.md
-!config.yaml
-!config/*.yaml
+!*.example
+!config/*.example
 
 # 版本文件
 v*

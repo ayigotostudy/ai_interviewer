@@ -1,0 +1,26 @@
+# 配置文件模板
+# 复制此文件为 config.yaml 并填入实际配置
+
+mysql:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  pwd: "your_password"
+  dbname: "ai_jianli"
+
+redis:
+  host: "localhost"
+  port: "6379"
+  pwd: "your_redis_password"
+
+localPath:
+  path: "/local/"
+
+speech:
+  apiKey: "your_xunfei_api_key"
+  apiSecret: "your_xunfei_secret"
+  appId: "your_xunfei_app_id"
+
+role:
+  model: "component/auth/casbin/model.conf"
+  policy: "component/auth/casbin/policy.csv"

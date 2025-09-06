@@ -265,9 +265,16 @@ npm install
 
 ### 3. 配置设置
 
+#### 复制配置模板
+```bash
+# 复制配置文件模板
+cp config.yaml.example config.yaml
+cp config/ai_config.yaml.example config/ai_config.yaml
+```
+
 #### 数据库配置
 ```yaml
-# config/config.yaml
+# config.yaml
 mysql:
   host: "localhost"
   port: "3306"
@@ -293,6 +300,8 @@ speech:
   api_secret: "your_xunfei_secret"
   app_id: "your_xunfei_app_id"
 ```
+
+> ⚠️ **安全提示**: 配置文件包含敏感信息，已添加到.gitignore中，不会被提交到远程仓库。请使用配置模板文件进行本地配置。
 
 ### 4. 数据库初始化
 
