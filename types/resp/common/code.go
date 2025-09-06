@@ -28,6 +28,8 @@ const (
 	CodeInvalidTokenExpired
 	CodeUserALREADYLocked
 	CodeVisitLimitExceeded
+	CodeSendEmailFail
+	CodeSendEmailSuccess
 )
 
 const (
@@ -120,6 +122,8 @@ var Msg = map[int64]string{
 	CodeVisitLimitExceeded:   "访问流量达到限制",
 	CodeInvalidTokenExpired:  "Token过期",
 	CodeUserALREADYLocked:    "用户已被锁定",
+	CodeSendEmailFail:        "发送邮箱失败",
+	CodeSendEmailSuccess:     "发送邮箱成功",
 
 	// 订单
 	CodeOrderStatusErr: "订单当前状态错误",

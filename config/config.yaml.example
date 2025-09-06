@@ -13,6 +13,14 @@ redis:
   port: "6379"
   pwd: "your_redis_password"
 
+# 邮件配置
+email:
+  addr: "smtp.qq.com:587"  # SMTP服务器地址和端口
+  host: "smtp.qq.com"  # SMTP服务器主机名
+  from: "Your App Name <your_email@qq.com>"  # 发件人名称和邮箱
+  email: "your_email@qq.com"  # 发件人邮箱
+  auth: "your_email_auth_code"  # 邮箱授权码
+
 localPath:
   path: "/local/"
 

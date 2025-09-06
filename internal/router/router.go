@@ -6,6 +6,8 @@ import (
 	"github.com/gin-contrib/cors"
 	_ "github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
+	 "ai_jianli_go/internal/controller/common_action"
+	common_action_service "ai_jianli_go/internal/service/common_action"
 )
 
 func Init() *gin.Engine {
@@ -32,6 +34,10 @@ func Init() *gin.Engine {
 
 	// API版本分组
 	v1 := r.Group("/api/v1")
+
+	commonActionSvc := common_action_service.NewCommonActionService()
+	commonActionCtrl := common_action.NewCommonActionController(commonActionSvc)
+	v1.GET("/authcode", commonActionCtrl.SendAuthCode)
 
 	// 为不同模块应用限流中间件
 	resume(v1.Group("/resume", middleware.GeneralRateLimitMiddleware()))

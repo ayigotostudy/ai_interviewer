@@ -10,7 +10,7 @@ import (
 type Config struct {
 	MySQL `yaml:"mysql"`
 	Redis `yaml:"redis"`
-	//EmailInfo `yaml:"email"`
+	Email `yaml:"email"`
 	Speech    `yaml:"speech"`
 	LocalPath `yaml:"localPath"`
 	Role      `yaml:"role"`
@@ -31,7 +31,7 @@ type Redis struct {
 	Pwd  string `yaml:"pwd"`
 }
 
-type EmailInfo struct {
+type Email struct {
 	Addr  string `yaml:"addr"`
 	Host  string `yaml:"host"`
 	From  string `yaml:"from"`
@@ -115,6 +115,8 @@ type AuthRateLimit struct {
 	SkipRoles    []string                 `yaml:"skipRoles"`
 }
 
+
+
 var config Config
 
 func Init() {
@@ -160,9 +162,9 @@ func GetRoleConfig() Role {
 	return config.Role
 }
 
-// func GetEmailInfo() EmailInfo {
-// 	return config.EmailInfo
-// }
+func GetEmail() Email {
+	return config.Email
+}
 
 func GetSpeechConfig() Speech {
 	return config.Speech

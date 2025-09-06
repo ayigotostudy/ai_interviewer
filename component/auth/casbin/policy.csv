@@ -1,6 +1,7 @@
 # 游客权限 - 只能访问公开接口
 p, guest, /api/v1/user/login, POST
 p, guest, /api/v1/user/register, POST
+p, guest, /api/v1/authcode, GET
 
 # 普通用户权限 - 所有功能
 p, common, /api/v1/resume, POST
