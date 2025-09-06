@@ -81,4 +81,4 @@ web/
 v*
 
 # 本地文件存储
-/local
+local/
