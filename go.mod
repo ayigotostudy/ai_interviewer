@@ -3,8 +3,10 @@ module ai_jianli_go
 go 1.24.1
 
 require (
+	github.com/casbin/casbin/v2 v2.122.0
 	github.com/cloudwego/eino v0.3.55
 	github.com/cloudwego/eino-ext/components/document/loader/file v0.0.0-20250604063857-19ef29584858
+	github.com/cloudwego/eino-ext/components/document/loader/url v0.0.0-20250828061307-a19adf5c9b50
 	github.com/cloudwego/eino-ext/components/document/parser/pdf v0.0.0-20250604063857-19ef29584858
 	github.com/cloudwego/eino-ext/components/embedding/openai v0.0.0-20250604063857-19ef29584858
 	github.com/cloudwego/eino-ext/components/indexer/redis v0.0.0-20250604063857-19ef29584858
@@ -15,7 +17,9 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/redis/go-redis/v9 v9.9.0
 	github.com/spf13/viper v1.20.1
+	github.com/stretchr/testify v1.11.1
 	go.uber.org/zap v1.27.0
+	golang.org/x/time v0.8.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.30.0
 )
@@ -25,12 +29,12 @@ require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
-	github.com/casbin/casbin/v2 v2.122.0 // indirect
 	github.com/casbin/govaluate v1.3.0 // indirect
-	github.com/cloudwego/eino-ext/components/document/loader/url v0.0.0-20250828061307-a19adf5c9b50 // indirect
 	github.com/cloudwego/eino-ext/components/document/parser/html v0.0.0-20241224063832-9fbcc0e56c28 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 )
 
 require (

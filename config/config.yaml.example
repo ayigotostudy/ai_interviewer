@@ -24,3 +24,36 @@ speech:
 role:
   model: "component/auth/casbin/model.conf"
   policy: "component/auth/casbin/policy.csv"
+
+# 限流配置
+rateLimit:
+  # 是否启用限流功能
+  enabled: true
+  
+  # 语音识别接口限流配置
+  speech:
+    rate: 100        # 100 QPS - 基于语音服务的实际处理能力
+    burst: 200       # 200个瞬时并发 - 保证低延迟体验
+    enabled: true
+    skipRoles: ["super_admin", "member"]  # 管理员和会员跳过限流
+  
+  # 通用API限流配置
+  general:
+    rate: 50         # 50 QPS - 适中的限制
+    burst: 100       # 100个瞬时并发
+    enabled: true
+    skipRoles: ["super_admin"]
+  
+  # 文件上传限流配置
+  upload:
+    rate: 10         # 10 QPS - 较低限制，因为文件上传较慢
+    burst: 20        # 20个瞬时并发
+    enabled: true
+    skipRoles: ["super_admin", "member"]
+  
+  # 认证接口限流配置
+  auth:
+    rate: 20         # 20 QPS - 严格限制，防止暴力破解
+    burst: 30        # 30个瞬时并发
+    enabled: true
+    skipRoles: []    # 认证接口不跳过限流

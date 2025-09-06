@@ -11,9 +11,10 @@ type Config struct {
 	MySQL `yaml:"mysql"`
 	Redis `yaml:"redis"`
 	//EmailInfo `yaml:"email"`
-	Speech `yaml:"speech"`
+	Speech    `yaml:"speech"`
 	LocalPath `yaml:"localPath"`
-	Role `yaml:"role"`
+	Role      `yaml:"role"`
+	RateLimit `yaml:"rateLimit"`
 }
 
 type MySQL struct {
@@ -50,8 +51,68 @@ type LocalPath struct {
 }
 
 type Role struct {
-	Model string `yaml:"model"`
+	Model  string `yaml:"model"`
 	Policy string `yaml:"policy"`
+}
+
+// RateLimit 限流配置结构体
+type RateLimit struct {
+	// 是否启用限流
+	Enabled bool `yaml:"enabled"`
+
+	// 语音识别接口配置
+	Speech SpeechRateLimit `yaml:"speech"`
+
+	// 通用API配置
+	General GeneralRateLimit `yaml:"general"`
+
+	// 文件上传配置
+	Upload UploadRateLimit `yaml:"upload"`
+
+	// 认证接口配置
+	Auth AuthRateLimit `yaml:"auth"`
+}
+
+// RoleRateLimit 角色特定限流配置
+type RoleRateLimit struct {
+	Rate  int `yaml:"rate"`  // 该角色的QPS限制
+	Burst int `yaml:"burst"` // 该角色的桶容量
+}
+
+// SpeechRateLimit 语音识别接口限流配置
+type SpeechRateLimit struct {
+	DefaultRate  int                      `yaml:"defaultRate"`  // 默认QPS限制
+	DefaultBurst int                      `yaml:"defaultBurst"` // 默认桶容量
+	RoleLimits   map[string]RoleRateLimit `yaml:"roleLimits"`   // 角色特定限流配置
+	Enabled      bool                     `yaml:"enabled"`      // 是否启用
+	SkipRoles    []string                 `yaml:"skipRoles"`    // 跳过限流的角色
+}
+
+// GeneralRateLimit 通用API限流配置
+type GeneralRateLimit struct {
+	DefaultRate  int                      `yaml:"defaultRate"`
+	DefaultBurst int                      `yaml:"defaultBurst"`
+	RoleLimits   map[string]RoleRateLimit `yaml:"roleLimits"`
+	Enabled      bool                     `yaml:"enabled"`
+	SkipRoles    []string                 `yaml:"skipRoles"`
+}
+
+// UploadRateLimit 文件上传限流配置
+type UploadRateLimit struct {
+	DefaultRate  int                      `yaml:"defaultRate"`
+	DefaultBurst int                      `yaml:"defaultBurst"`
+	RoleLimits   map[string]RoleRateLimit `yaml:"roleLimits"`
+	Enabled      bool                     `yaml:"enabled"`
+	SkipRoles    []string                 `yaml:"skipRoles"`
+}
+
+// AuthRateLimit 认证接口限流配置
+type AuthRateLimit struct {
+	DefaultRate  int                      `yaml:"defaultRate"`
+	DefaultBurst int                      `yaml:"defaultBurst"`
+	RoleLimits   map[string]RoleRateLimit `yaml:"roleLimits"`
+	Enabled      bool                     `yaml:"enabled"`
+	SkipRoles    []string                 `yaml:"skipRoles"`
 }
 
 var config Config
@@ -105,4 +166,8 @@ func GetRoleConfig() Role {
 
 func GetSpeechConfig() Speech {
 	return config.Speech
+}
+
+func GetRateLimitConfig() RateLimit {
+	return config.RateLimit
 }

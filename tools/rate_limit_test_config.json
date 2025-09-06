@@ -1,0 +1,10 @@
+{
+  "base_url": "http://localhost:8080",
+  "endpoint": "/api/v1/speech/recognize",
+  "concurrent": 20,
+  "total_requests": 2000,
+  "test_duration": 120,
+  "user_id": "test_user",
+  "user_role": "common",
+  "audio_file": "/tmp/test_audio.wav"
+}

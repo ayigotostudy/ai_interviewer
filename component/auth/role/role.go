@@ -15,6 +15,7 @@ var checkLock sync.Mutex
 // 验证权限 - 通用权限检查
 func CheckPermission(c context.Context, ctx *gin.Context, userId int64, role int64) (StatusCode int64) {
 	userRole := GetRoleString(role)
+	ctx.Set("role", userRole)
 	return check(userId, userRole, ctx.FullPath(), string(ctx.Request.Method))
 }
 
