@@ -11,7 +11,7 @@ var (
 )
 
 func Init() {
+	initAIComponent()
 	initMySQL()
 	initRedis()
-	initAIComponent()
 }

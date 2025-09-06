@@ -2,15 +2,12 @@ package component
 
 import (
 	"ai_jianli_go/config"
-	"ai_jianli_go/logs"
 	"ai_jianli_go/types/model"
-	"context"
 	"fmt"
 	"io"
 
 	"os"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -53,15 +50,7 @@ func initTemplate() {
 	defer file.Close()
 	// 初始化模板
 	template := model.NewTemplate("默认模板", string(content))
-	chatModel, err := openai.NewChatModel(context.Background(), &openai.ChatModelConfig{
-		Model:   "gpt-4o",
-		BaseURL: "https://api.vveai.com/v1",
-		APIKey:  "sk-npfmWk7VxIyeWYt23c5dCc49E7C343E487913c3e71E30b81",
-	})
-	if err != nil {
-		logs.SugarLogger.Error("初始化chatModel失败", err)
-		return
-	}
+	chatModel := GetAIComponent().GetChatModel("gpt-4o")
 	template.SetShowContent(chatModel)
 	db.Create(template)
 }
