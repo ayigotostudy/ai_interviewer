@@ -3,6 +3,7 @@ package meetingService
 import (
 	"ai_jianli_go/component"
 	"ai_jianli_go/internal/dao"
+	wikiService "ai_jianli_go/internal/service/wiki"
 	"ai_jianli_go/logs"
 	"ai_jianli_go/pkg/rag"
 	"ai_jianli_go/types/model"
@@ -25,7 +26,7 @@ func NewMeetingService(dao *dao.MeetingDAO) *MeetingService {
 }
 
 const (
-	PLANED       = "planed"
+	PLANED       = "planned"
 	INTERVIEWING = "interviewing"
 	COMPLETED    = "completed"
 	CANCELED     = "canceled"
@@ -40,6 +41,7 @@ func (s *MeetingService) Create(request *req.CreateMeetingReq) int64 {
 		JobDescription: request.JobDescription,
 		Time:           request.Time,
 		Status:         PLANED,
+		WikiID:         request.WikiID,
 	}
 	err := s.dao.Create(meeting)
 	if err != nil {
@@ -183,22 +185,21 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 	if con.GetLastConversationsKnowledge() == "" {
 		con.SetLastConversationKnowledge(meeting.Resume)
 	}
-	// 获取知识库相关内容
-	retriever := rag.GetRetriever()
-	docs, err := retriever.Retrieve(ctx, con.GetLastConversationsKnowledge())
-	if err != nil {
-		logs.SugarLogger.Errorf("获取检索器失败: %v", err)
-		return "", common.CodeServerBusy
-	}
 
-	// 构建上下文
-	context := ""
-	if len(docs) > 0 {
-		contextParts := make([]string, len(docs))
-		for i, doc := range docs {
-			contextParts[i] = fmt.Sprintf("文档片段[%d]:\n%s\n", i+1, doc.Content)
+	var wiki string
+	var code int64
+	if meeting.WikiID != 0 {
+		wikiService := wikiService.NewWikiService(dao.NewWikiDAO(component.GetMySQLDB()))
+		wiki, code = wikiService.Query(&req.QueryWikiRequest{
+			UserID: request.UserID,
+			RootId: meeting.WikiID,
+			Query:  con.GetLastConversationsKnowledge(),
+		})
+		if code != common.CodeSuccess {
+			return "", code
 		}
-		context = strings.Join(contextParts, "\n---\n")
+	}else{
+		wiki = con.GetLastConversationsKnowledge()
 	}
 
 	// 创建对话模型
@@ -236,7 +237,7 @@ func (s *MeetingService) AIInterview(request *req.AIInterviewReq) (string, int64
 
 	// 构建提示
 	prompt := map[string]any{
-		"context":         context,
+		"context":        wiki,
 		"answer":          request.Answer,
 		"resume":          meeting.Resume,
 		"history":         con.String(),

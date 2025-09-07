@@ -40,14 +40,14 @@ func Init() *gin.Engine {
 	v1.GET("/authcode", commonActionCtrl.SendAuthCode)
 
 	// 为不同模块应用限流中间件
-	resume(v1.Group("/resume", middleware.GeneralRateLimitMiddleware()))
-	meeting(v1.Group("/meeting", middleware.GeneralRateLimitMiddleware()))
+	resume(v1.Group("/resume", middleware.Auth(),middleware.GeneralRateLimitMiddleware()))
+	meeting(v1.Group("/meeting", middleware.Auth(),middleware.GeneralRateLimitMiddleware()))
 	user(v1.Group("/user", middleware.GeneralRateLimitMiddleware()))
-	speech(v1.Group("/speech", middleware.SpeechRateLimitMiddleware()))
-	wiki(v1.Group("/wiki", middleware.GeneralRateLimitMiddleware()))
+	speech(v1.Group("/speech", middleware.Auth(), middleware.SpeechRateLimitMiddleware()))
+	wiki(v1.Group("/wiki", middleware.Auth(), middleware.GeneralRateLimitMiddleware()))
 
 	// 限流管理接口（仅管理员可访问）
-	ratelimit(v1.Group("/ratelimit", middleware.GeneralRateLimitMiddleware()))
+	ratelimit(v1.Group("/ratelimit", middleware.Auth(), middleware.GeneralRateLimitMiddleware()))
 
 	return r
 }

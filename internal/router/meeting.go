@@ -4,7 +4,6 @@ import (
 	"ai_jianli_go/component"
 	meetingController "ai_jianli_go/internal/controller/meeting"
 	"ai_jianli_go/internal/dao"
-	"ai_jianli_go/internal/middleware"
 	meetingService "ai_jianli_go/internal/service/meeting"
 
 	"github.com/gin-gonic/gin"
@@ -15,7 +14,6 @@ func meeting(rg *gin.RouterGroup) {
 	meetingSvc := meetingService.NewMeetingService(meetingDao)
 	meetingCtrl := meetingController.NewMeetingController(meetingSvc)
 
-	rg.Use(middleware.Auth())
 	rg.POST("", meetingCtrl.Create)
 	rg.PUT("", meetingCtrl.Update)
 	rg.GET("", meetingCtrl.Get)

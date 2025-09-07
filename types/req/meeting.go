@@ -8,6 +8,7 @@ type CreateMeetingReq struct {
 	Time           int64  `json:"time"`                         // 面试时间
 	Status         string `json:"status"`                       // 面试状态
 	Remark         string `json:"remark"`                       // 备注
+	WikiID          uint   `json:"wiki_id"`                      // 知识库ID
 }
 
 type UpdateMeetingReq struct {
