@@ -48,19 +48,26 @@ func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeR
 		"score":      req.Awards,
 		"info":       req.TargetJob,
 	}
+	logs.SugarLogger.Infof("promptVars: %v\n", promptVars)
+// 创建模板，使用 FString 格式
+template := prompt.FromMessages(schema.FString,
+    // 系统消息模板 - 增强角色定义、输出要求和优化策略
+    schema.SystemMessage(`你是一名专业的简历优化与生成专家。你的核心目标是帮助求职者制作一份能高效通过HR筛选和自动化招聘系统（ATS）的专业简历。
+    
+请严格遵循以下原则生成和优化内容：
+1.  **内容扩写与丰富**: 对于用户未提供或简略的内容，基于其现有信息和目标岗位{info}进行合理、专业的扩写，确保内容饱满且真实可信。
+2.  **成就量化**: 强烈倾向于使用具体数据、百分比、金额、时间等量化指标来突出成就和贡献。例如，将“负责提升系统性能”优化为“通过代码重构和数据库优化，将系统响应时间减少30%”。
+3.  **关键词优化**: 精准分析并融入岗位描述{info}中的关键词和行业特定术语，以提高简历在ATS系统中的匹配度。
+4.  **STAR法则**: 在描述工作经历{work}和项目经验{demo}时，运用STAR（情境-Situation, 任务-Task, 行动-Action, 结果-Result）法则来构建内容，使其结构清晰、重点突出。
+5.  **专业技能表达**: 优化技能描述，使用“精通”、“熟练掌握”、“熟悉”等程度副词，并结合具体应用场景或技术栈。例如，将“会使用Python”优化为“熟练掌握Python进行数据分析和自动化脚本开发”。
+6.  **语言与格式**: 使用专业、主动、有力的动词开头描述经历和成就。保持整体语言简洁、清晰，避免冗余。严格遵循JSON格式输出。
+7.  **真实性原则**: 所有扩写和优化内容必须基于用户提供的信息点，不得虚构不存在的重要经历或技能。
 
-	// 创建模板，使用 FString 格式
-	// 创建模板，使用 FString 格式
-	template := prompt.FromMessages(schema.FString,
-		// 系统消息模板
-		schema.SystemMessage("你是一个{role}。你需要专业切合实际地回答（最终目标是使简历更容易通过筛选）。你的目标是帮助求职者生成一份专业严谨的简历， 你将根据简历模版（jinja格式）返回对应的json数据， 如果模版有些内容用户没有提供，则帮它生成（可自己扩写）"),
+请根据提供的简历模板{template}的结构和要求，填充和优化内容，并返回**严格符合模板规范**的JSON数据, 生成数据的字段要与模版需要字段对应。`),
 
-		// 插入需要的对话历史（新对话的话这里不填）
-		schema.MessagesPlaceholder("chat_history", true),
-
-		// 用户消息模板
-		schema.UserMessage("简历模版: {template}\n基本信息:{basic_info}\n工作经历:{work}\n项目简历:{demo}\n个人评价:{comment}\n获奖情况:{score}\n岗位信息:{info}"),
-	)
+    // 用户消息模板 (参数保持不变，但通过系统提示引导更丰富的输出)
+    schema.UserMessage("简历模版: {template}\n基本信息:{basic_info}\n工作经历:{work}\n项目经历:{demo}\n个人评价:{comment}\n获奖情况:{score}\n岗位信息:{info}"),
+)
 
 	// 使用模板生成消息
 	messages, err := template.Format(context.Background(), promptVars)
@@ -87,7 +94,7 @@ func (s *ResumeService) CreateResume(ctx context.Context, req *req.CreateResumeR
 		logs.SugarLogger.Errorf("解析生成的内容失败: %v", err)
 		return nil, common.CodeCreateResumeFail
 	}
-
+	
 	// 保存简历
 	resume.Content = output
 	err = s.dao.CreateResume(resume)

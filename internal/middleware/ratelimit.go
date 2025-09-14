@@ -51,18 +51,22 @@ type RateLimitConfig struct {
 
 // RateLimiter 限流器结构体
 // 管理多个限流器实例，每个限流键对应一个独立的令牌桶
+// 增强版RateLimiter结构体，添加最后访问时间记录
 type RateLimiter struct {
-	// limiters 限流器映射表
-	// key: 限流键（如"ip:192.168.1.1"或"user:12345"）
-	// value: 对应的令牌桶限流器实例
-	limiters map[string]*rate.Limiter
-
-	// mu 读写锁，保护limiters映射表的并发访问
-	// 使用读写锁是因为读操作（Allow）比写操作（创建新限流器）更频繁
-	mu sync.RWMutex
-
-	// config 限流配置，包含速率、桶容量等参数
-	config RateLimitConfig
+    // limiters 限流器映射表
+    limiters map[string]*rate.Limiter
+    
+    // lastAccess 记录每个限流器最后访问时间
+    lastAccess map[string]time.Time
+    
+    // mu 读写锁，保护并发访问
+    mu sync.RWMutex
+    
+    // config 限流配置
+    config RateLimitConfig
+    
+    // cleanupThreshold 清理阈值，超过这个时间未访问的限流器将被清理
+    cleanupThreshold time.Duration
 }
 
 // NewRateLimiter 创建新的限流器实例
@@ -77,72 +81,77 @@ type RateLimiter struct {
 //  2. 设置默认的限流回调函数（如果未提供）
 //  3. 初始化限流器映射表和配置
 func NewRateLimiter(config RateLimitConfig) *RateLimiter {
-	// 如果没有提供键生成函数，使用默认的IP限流策略
-	if config.KeyFunc == nil {
-		config.KeyFunc = func(c *gin.Context) string {
-			return c.ClientIP()
-		}
-	}
+    // 保留原有的默认配置设置
+    if config.KeyFunc == nil {
+        config.KeyFunc = func(c *gin.Context) string {
+            return c.ClientIP()
+        }
+    }
+    if config.OnLimitReached == nil {
+        config.OnLimitReached = func(c *gin.Context, key string) {
+            rate := config.GetRateFunc(c)
+            c.Header("X-RateLimit-Limit", strconv.Itoa(rate))
+            c.Header("X-RateLimit-Remaining", "0")
+            c.Header("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(time.Second).Unix(), 10))
+            c.Header("Retry-After", "1")
+            c.JSON(http.StatusTooManyRequests, gin.H{
+                "error":       "请求过于频繁，请稍后重试",
+                "code":        "RATE_LIMIT_EXCEEDED",
+                "retry_after": 1,
+            })
+        }
+    }
 
-	// 如果没有提供限流回调函数，使用默认的HTTP 429响应
-	if config.OnLimitReached == nil {
-		config.OnLimitReached = func(c *gin.Context, key string) {
-			// 动态获取当前用户的限流参数
-			rate := config.GetRateFunc(c)
-
-			// 设置标准的限流响应头
-			c.Header("X-RateLimit-Limit", strconv.Itoa(rate))
-			c.Header("X-RateLimit-Remaining", "0")
-			c.Header("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(time.Second).Unix(), 10))
-			c.Header("Retry-After", "1")
-
-			// 返回标准的限流错误响应
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":       "请求过于频繁，请稍后重试",
-				"code":        "RATE_LIMIT_EXCEEDED",
-				"retry_after": 1,
-			})
-		}
-	}
-
-	return &RateLimiter{
-		limiters: make(map[string]*rate.Limiter),
-		config:   config,
-	}
+    return &RateLimiter{
+        limiters:        make(map[string]*rate.Limiter),
+        lastAccess:      make(map[string]time.Time), // 初始化最后访问时间映射表
+        config:          config,
+        cleanupThreshold: 30 * time.Minute, // 默认30分钟未访问则清理
+    }
 }
 
-// getLimiter 获取或创建限流器实例
-// 参数：
-//   - c: gin.Context，用于获取用户角色和动态限流参数
-//   - key: 限流键，用于标识不同的限流对象
-//
-// 返回值：
-//   - *rate.Limiter: 对应的令牌桶限流器实例
-//
-// 功能说明：
-//  1. 使用写锁保护映射表的并发访问
-//  2. 根据用户角色动态获取限流参数
-//  3. 如果限流键对应的限流器不存在，则创建新的
-//  4. 使用动态获取的Rate和Burst参数初始化令牌桶
-//  5. 返回限流器实例供后续使用
+// getLimiter 获取或创建限流器实例（修改版）
 func (rl *RateLimiter) getLimiter(c *gin.Context, key string) *rate.Limiter {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
+    rl.mu.Lock()
+    defer rl.mu.Unlock()
 
-	// 动态获取当前用户的限流参数
-	rateValue := rl.config.GetRateFunc(c)
-	burstValue := rl.config.GetBurstFunc(c)
+    rateValue := rl.config.GetRateFunc(c)
+    burstValue := rl.config.GetBurstFunc(c)
 
-	// 检查是否已存在该键的限流器
-	limiter, exists := rl.limiters[key]
-	if !exists {
-		// 创建新的令牌桶限流器
-		// rate.Limit(rateValue): 每秒令牌生成速率
-		// burstValue: 桶容量，允许的瞬时并发峰值
-		limiter = rate.NewLimiter(rate.Limit(rateValue), burstValue)
-		rl.limiters[key] = limiter
-	}
-	return limiter
+    limiter, exists := rl.limiters[key]
+    if !exists {
+        limiter = rate.NewLimiter(rate.Limit(rateValue), burstValue)
+        rl.limiters[key] = limiter
+    }
+    
+    // 更新最后访问时间
+    rl.lastAccess[key] = time.Now()
+    
+    return limiter
+}
+
+// Cleanup 清理过期的限流器（增强版）
+func (rl *RateLimiter) Cleanup() {
+    rl.mu.Lock()
+    defer rl.mu.Unlock()
+
+    now := time.Now()
+    count := 0
+    
+    // 遍历所有限流器，清理超过阈值未访问的实例
+    for key, lastAccessTime := range rl.lastAccess {
+        if now.Sub(lastAccessTime) > rl.cleanupThreshold {
+            delete(rl.limiters, key)
+            delete(rl.lastAccess, key)
+            count++
+        }
+    }
+    
+    // 可选：记录清理日志
+    if count > 0 {
+        // 注意：这里应使用实际的日志记录函数
+        fmt.Printf("RateLimiter: 清理了%d个过期的限流器实例\n", count)
+    }
 }
 
 // Allow 检查是否允许请求通过
@@ -239,14 +248,6 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 	}
 }
 
-// Cleanup 清理过期的限流器（定期调用）
-func (rl *RateLimiter) Cleanup() {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	// 这里可以实现更复杂的清理逻辑
-	// 目前保持简单，让GC处理
-}
 
 // 辅助函数：从Gin上下文获取用户角色
 func getUserRole(c *gin.Context) string {
